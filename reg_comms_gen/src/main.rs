@@ -81,5 +81,5 @@ fn main() {
         outfile.write_all(file_contents.as_bytes()).unwrap();
     }
     let mut outfile = File::create(format!("{}/Cargo.toml", &opts.output_directory)).unwrap();
-    outfile.write_all(peripheral_spec.generate_cargo_toml().as_bytes()).unwrap();
+    outfile.write_all(peripheral_spec.generate_cargo_toml(opts.reg_comms_path.clone()).as_bytes()).unwrap();
 }

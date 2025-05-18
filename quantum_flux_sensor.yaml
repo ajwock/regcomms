@@ -1,0 +1,101 @@
+name: QuantumFluxSensor
+byte_order: Big
+address_len: 4
+registers:
+  - name: who_am_i
+    address: 0xffffff08
+    size: 4
+    readable: true
+    writable: false
+    fields:
+      - name: id
+        field_pos: '[31:0]'
+  - name: power_mode
+    address: 0x1
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x0
+    fields:
+      - name: pulsed
+        field_pos: '7'
+      - name: poweron_mode
+        field_pos: '[5:3]'
+  - name: lepton_config
+    address: 0x16
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0xe0
+    fields:
+      - name: odr
+        field_pos: '[7:5]'
+      - name: dlpf
+        field_pos: '[4:2]'
+      - name: scale
+        field_pos: '[1:0]'
+  - name: quark_config
+    address: 0x17
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0xe0
+    fields:
+      - name: odr
+        field_pos: '[7:5]'
+      - name: dlpf
+        field_pos: '[4:2]'
+      - name: scale
+        field_pos: '[1:0]'
+  - name: boson_config
+    address: 0x18
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0xe0
+    fields:
+      - name: odr
+        field_pos: '[7:5]'
+      - name: dlpf
+        field_pos: '[4:2]'
+      - name: scale
+        field_pos: '[1:0]'
+  - name: lepton_data
+    address: 0xff000000
+    size: 2
+    readable: true
+    writable: false
+    fields:
+      - name: data
+        field_pos: '[15:0]'
+  - name: quark_data
+    address: 0xff000002
+    size: 2
+    readable: true
+    writable: false
+    fields:
+      - name: data
+        field_pos: '[15:0]'
+  - name: boson_data
+    address: 0xff000004
+    size: 2
+    readable: true
+    writable: false
+    fields:
+      - name: data
+        field_pos: '[15:0]'
+  - name: fifo_config
+    address: 0x20
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0xe3
+    fields:
+      - name: fifo_src
+        field_pos: '[7:5]'
+      - name: fifo_fmt
+        field_pos: '[1:0]'
+      - name: fifo_en
+        field_pos: '2'
+      - name: fifo_decimation
+        field_pos: '[4:3]'

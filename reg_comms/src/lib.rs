@@ -22,7 +22,7 @@ impl<A: embedded_hal::i2c::AddressMode, I: embedded_hal::i2c::I2c<A>, const N: u
     }
 }
 
-
+#[derive(Copy, Clone, Debug)]
 pub enum RegCommsError {
     Other,
 }
@@ -67,6 +67,51 @@ impl RegCommsAddress<1> for u8 {
     }
     fn from_little_endian(bytes: [u8; 1]) -> u8 {
         bytes[0]
+    }
+}
+
+impl RegCommsAddress<2> for u16 {
+    fn to_big_endian(self) -> [u8; 2] {
+        self.to_be_bytes()
+    }
+    fn to_little_endian(self) -> [u8; 2] {
+        self.to_le_bytes()
+    }
+    fn from_big_endian(bytes: [u8; 2]) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+    fn from_little_endian(bytes: [u8; 2]) -> Self {
+        Self::from_le_bytes(bytes)
+    }
+}
+
+impl RegCommsAddress<4> for u32 {
+    fn to_big_endian(self) -> [u8; 4] {
+        self.to_be_bytes()
+    }
+    fn to_little_endian(self) -> [u8; 4] {
+        self.to_le_bytes()
+    }
+    fn from_big_endian(bytes: [u8; 4]) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+    fn from_little_endian(bytes: [u8; 4]) -> Self {
+        Self::from_le_bytes(bytes)
+    }
+}
+
+impl RegCommsAddress<8> for u64 {
+    fn to_big_endian(self) -> [u8; 8] {
+        self.to_be_bytes()
+    }
+    fn to_little_endian(self) -> [u8; 8] {
+        self.to_le_bytes()
+    }
+    fn from_big_endian(bytes: [u8; 8]) -> Self {
+        Self::from_be_bytes(bytes)
+    }
+    fn from_little_endian(bytes: [u8; 8]) -> Self {
+        Self::from_le_bytes(bytes)
     }
 }
 

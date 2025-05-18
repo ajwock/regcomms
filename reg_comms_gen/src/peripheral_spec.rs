@@ -57,7 +57,7 @@ impl PeripheralSpec {
         out.push_str(&format!("pub enum AccessProc {{\n"));
         out.push_str(&format!("    Standard,\n"));
         out.push_str(&format!("}}\n"));
-        out.push_str(&format!("pub struct {}<C: RegComms<{}, {}>>(C);\n", self.peripheral_struct_name(), self.address_word_size(), self.address_word_name()));
+        out.push_str(&format!("pub struct {}<C: RegComms<{}, {}>>(pub C);\n", self.peripheral_struct_name(), self.address_word_size(), self.address_word_name()));
         out.push_str(&format!("impl<C: RegComms{}> {}<C> {{\n", self.regcomms_params(), self.peripheral_struct_name()));
         out.push_str(&format!("    pub fn comms_read(&mut self, reg_address: {}, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
         out.push_str(&format!("        self.0.comms_read(reg_address, buf)\n"));
@@ -85,14 +85,15 @@ impl PeripheralSpec {
         out
     }
 
-    pub fn generate_cargo_toml(&self) -> String {
+    pub fn generate_cargo_toml(&self, reg_comms_path: Option<String>) -> String {
         let mut out = String::new();
         out.push_str(&format!("[package]\n"));
         out.push_str(&format!("name = \"{}\"\n", self.peripheral_mod_name()));
         out.push_str(&format!("edition = \"2024\"\n"));
         out.push_str(&format!("version = \"0.1.0\"\n\n"));
         out.push_str(&format!("[dependencies]\n"));
-        out.push_str(&format!("reg_comms = {{ path = \"../reg_comms\" }}\n"));
+        let rcpath = reg_comms_path.unwrap_or("../reg_comms".to_string());
+        out.push_str(&format!("reg_comms = {{ path = \"{}\" }}\n", rcpath));
         out
     }
 }
