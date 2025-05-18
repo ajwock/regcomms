@@ -1,11 +1,3 @@
-[package]
-name = "comms_register"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-clap = { version = "4.5.38", features = ["derive"] }
-clap_derive = "4.5.32"
-serde = { version = "1.0.219", features = ["derive"] }
-serde_yaml = "0.9.34"
-stringcase = "0.4.0"
+[workspace]
+resolver = "3"
+members = ["reg_comms_gen", "reg_comms", "lsm6dsv"]

@@ -75,7 +75,7 @@ impl RegisterSpec {
     }
 
     pub fn access_proc_enum(&self) -> String {
-        let Some(ref proc) = self.access_proc else {
+        let Some(ref _proc) = self.access_proc else {
             return "crate::AccessProc::Standard".to_string()
         };
         todo!()

@@ -15,6 +15,10 @@ impl PeripheralSpec {
         stringcase::pascal_case(&self.name)
     }
 
+    pub fn peripheral_mod_name(&self) -> String {
+        stringcase::snake_case(&self.name)
+    }
+
     pub fn endian(&self) -> Endian {
         self.byte_order
     }
@@ -44,7 +48,7 @@ impl PeripheralSpec {
         format!("<{}, {}>", self.address_word_size(), self.address_word_name())
     }
 
-    pub fn generate_modrs(&self) -> String {
+    pub fn generate_librs(&self) -> String {
         let mut out = String::new();
         for register in self.registers.iter() {
             out.push_str(&format!("mod {};\n", register.reg_mod_name()));
@@ -72,12 +76,23 @@ impl PeripheralSpec {
 
     pub fn generate_module(&self) -> Vec<(String, String)> {
         let mut out = Vec::new();
-        out.push((String::from("mod.rs"), self.generate_modrs()));
+        out.push((String::from("lib.rs"), self.generate_librs()));
         for register in self.registers.iter() {
             let register_source = register.generate_file(&self);
             let register_source_name = format!("{}.rs", register.reg_mod_name());
             out.push((register_source_name, register_source));
         }
+        out
+    }
+
+    pub fn generate_cargo_toml(&self) -> String {
+        let mut out = String::new();
+        out.push_str(&format!("[package]\n"));
+        out.push_str(&format!("name = \"{}\"\n", self.peripheral_mod_name()));
+        out.push_str(&format!("edition = \"2024\"\n"));
+        out.push_str(&format!("version = \"0.1.0\"\n\n"));
+        out.push_str(&format!("[dependencies]\n"));
+        out.push_str(&format!("reg_comms = {{ path = \"../reg_comms\" }}\n"));
         out
     }
 }
