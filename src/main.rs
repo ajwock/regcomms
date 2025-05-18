@@ -62,4 +62,6 @@ registers:
     let parsed: PeripheralSpec = serde_yaml::from_str(spec_string).unwrap();
     let codegen = parsed.registers[0].generate_file(&parsed);
     println!("Code generated:\n{}", codegen);
+    let modrs = parsed.generate_modrs();
+    println!("Code generated:\n{}", modrs);
 }

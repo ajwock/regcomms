@@ -1,18 +1,18 @@
 
-pub struct MyReg<'a, C: RegisterComms>(&'a mut MyPeripheral<C>);
+pub struct MyReg<'a, C: RegComms>(&'a mut MyPeripheral<C>);
 
 impl<'a, C> MyReg<'a, C> {
-    pub fn read(&self) -> Result<MyRegVal, CommsRegError> {
+    pub fn read(&self) -> Result<MyRegVal, RegCommsError> {
         // Since it's big endian, we will pad on the right while under-reading
         let mut buf = [0u8; 4];
-        self.0.comms_read(0x0f, &mut buf[1:4], crate::AccessProc::Default)?;
+        self.0.comms_read(0x0f, &mut buf[1:4], crate::AccessProc::Standard)?;
         let val = u32::from_be_bytes();
         Ok(MyRegVal(val))
     }
 
-    pub fn write(&self, val: MyRegVal) -> Result<CommsRegError> {
+    pub fn write(&self, val: MyRegVal) -> Result<RegCommsError> {
         let outbuf = val.0.to_be_bytes();
-        self.0.comms_write(0x0f, &outbuf[1:4], crate::AccessProc::Default)?;
+        self.0.comms_write(0x0f, &outbuf[1:4], crate::AccessProc::Standard)?;
         Ok(())
     }
 }

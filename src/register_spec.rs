@@ -18,6 +18,15 @@ pub struct RegisterSpec {
 }
 
 impl RegisterSpec {
+
+    pub fn reg_mod_name(&self) -> String {
+        stringcase::snake_case(&self.name)
+    }
+
+    pub fn reg_method_name(&self) -> String {
+        stringcase::snake_case(&self.name)
+    }
+
     pub fn reg_struct_name(&self) -> String {
         stringcase::pascal_case(&self.name)
     }
@@ -74,12 +83,12 @@ impl RegisterSpec {
 
     pub fn generate_file(&self, pspec: &PeripheralSpec) -> String {
         let mut out = String::new();
-        out.push_str(&format!("pub struct {}<'a, C: RegisterComms>(&'a mut {}<C>);\n", self.reg_struct_name(), pspec.peripheral_struct_name()));
+        out.push_str(&format!("pub struct {}<'a, C: RegComms>(&'a mut {}<C>);\n", self.reg_struct_name(), pspec.peripheral_struct_name()));
         out.push_str(&format!("pub struct {}({});\n", self.regval_struct_name(), self.regval_word_name()));
-        out.push_str(&format!("impl<'a, C: RegisterComms> {} {{\n", self.reg_struct_name()));
+        out.push_str(&format!("impl<'a, C: RegComms> {} {{\n", self.reg_struct_name()));
         let endian = pspec.endian();
         if self.readable {
-            out.push_str(&format!("    pub fn read(&self) -> Result<{}, CommsRegError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("    pub fn read(&self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
             out.push_str(&format!("        self.0.comms_read(0x{:x}, &mut buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
             out.push_str(&format!("        let val = {}::from_{}_bytes();\n", self.regval_word_name(), endian.abbrev()));
@@ -87,7 +96,7 @@ impl RegisterSpec {
             out.push_str(&format!("    }}\n"));
         }
         if self.writable {
-            out.push_str(&format!("    pub fn write(&self, val: {}) -> Result<(), CommsRegError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("    pub fn write(&self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
             out.push_str(&format!("        self.0.comms_write(0x{:x}, &buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
             out.push_str(&format!("        Ok(())\n"));

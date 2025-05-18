@@ -96,7 +96,7 @@ impl Serialize for FieldPos {
 
 impl FieldSpec {
     pub fn method_name(&self) -> String {
-        stringcase::camel_case(&self.name)
+        stringcase::snake_case(&self.name)
     }
 
     pub fn struct_name(&self) -> String {
