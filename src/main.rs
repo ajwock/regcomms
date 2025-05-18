@@ -2,7 +2,7 @@ mod register_spec;
 mod field_spec;
 mod peripheral_spec;
 mod endian;
-//mod generation_utils;
+mod opts;
 
 use register_spec::RegisterSpec;
 use field_spec::{
@@ -11,11 +11,16 @@ use field_spec::{
 };
 use peripheral_spec::PeripheralSpec;
 use endian::Endian;
+use opts::Opts;
+use std::fs::File;
+use std::io::{BufReader, BufRead, Write};
+use clap::Parser;
 
-fn main() {
+fn test_routine() {
     let peripheral_spec = PeripheralSpec {
         name: "MyPeripheral".to_string(),
         byte_order: Endian::Big,
+        address_len: 2,
         registers: vec![
                 RegisterSpec {
                 name: "test_reg".to_string(),
@@ -64,4 +69,16 @@ registers:
     println!("Code generated:\n{}", codegen);
     let modrs = parsed.generate_modrs();
     println!("Code generated:\n{}", modrs);
+}
+
+fn main() {
+    let opts = Opts::parse();
+    let yaml_file = File::open(&opts.yamlfile).unwrap();
+    let yaml_reader = BufReader::new(yaml_file);
+    let peripheral_spec: PeripheralSpec = serde_yaml::from_reader(yaml_reader).unwrap();
+    let peripheral_mod = peripheral_spec.generate_module();
+    for (filename, file_contents) in peripheral_mod {
+        let mut outfile = File::create(format!("{}/{}", opts.output_directory, filename)).unwrap();
+        outfile.write_all(file_contents.as_bytes()).unwrap();
+    }
 }

@@ -76,27 +76,28 @@ impl RegisterSpec {
 
     pub fn access_proc_enum(&self) -> String {
         let Some(ref proc) = self.access_proc else {
-            return "crate::access_proc::Default".to_string()
+            return "crate::AccessProc::Standard".to_string()
         };
         todo!()
     }
 
     pub fn generate_file(&self, pspec: &PeripheralSpec) -> String {
         let mut out = String::new();
-        out.push_str(&format!("pub struct {}<'a, C: RegComms>(&'a mut {}<C>);\n", self.reg_struct_name(), pspec.peripheral_struct_name()));
-        out.push_str(&format!("pub struct {}({});\n", self.regval_struct_name(), self.regval_word_name()));
-        out.push_str(&format!("impl<'a, C: RegComms> {} {{\n", self.reg_struct_name()));
+        out.push_str(&format!("use reg_comms::{{RegCommsError, RegComms}};\n"));
+        out.push_str(&format!("use crate::{};\n", pspec.peripheral_struct_name()));
+        out.push_str(&format!("pub struct {}<'a, C: RegComms{}>(pub &'a mut {}<C>);\n", self.reg_struct_name(), pspec.regcomms_params(), pspec.peripheral_struct_name()));
+        out.push_str(&format!("impl<'a, C: RegComms{}> {}<'a, C> {{\n", pspec.regcomms_params(), self.reg_struct_name()));
         let endian = pspec.endian();
         if self.readable {
-            out.push_str(&format!("    pub fn read(&self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("    pub fn read(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
             out.push_str(&format!("        self.0.comms_read(0x{:x}, &mut buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
-            out.push_str(&format!("        let val = {}::from_{}_bytes();\n", self.regval_word_name(), endian.abbrev()));
+            out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
             out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
             out.push_str(&format!("    }}\n"));
         }
         if self.writable {
-            out.push_str(&format!("    pub fn write(&self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("    pub fn write(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
             out.push_str(&format!("        self.0.comms_write(0x{:x}, &buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
             out.push_str(&format!("        Ok(())\n"));
@@ -105,9 +106,9 @@ impl RegisterSpec {
         out.push_str(&format!("}}\n"));
 
         // Regval struct generation
-        out.push_str(&format!("pub struct {}({});\n", self.regval_struct_name(), self.regval_word_name()));
+        out.push_str(&format!("pub struct {}(pub {});\n", self.regval_struct_name(), self.regval_word_name()));
         out.push_str(&format!("impl {} {{\n", self.regval_struct_name()));
-        out.push_str(&format!("    pub fn get() -> {} {{\n", self.regval_word_name()));
+        out.push_str(&format!("    pub fn get(&self) -> {} {{\n", self.regval_word_name()));
         out.push_str(&format!("        self.0\n"));
         out.push_str(&format!("    }}\n"));
         if self.writable {
@@ -124,7 +125,7 @@ impl RegisterSpec {
 
         // Field struct generation
         for field in self.fields.iter() {
-            out.push_str(&format!("pub struct {}<'a>(&'a mut {});\n", field.struct_name(), self.regval_struct_name()));
+            out.push_str(&format!("pub struct {}<'a>(pub &'a mut {});\n", field.struct_name(), self.regval_struct_name()));
             out.push_str(&format!("impl<'a> {}<'a> {{\n", field.struct_name()));
             match field.field_pos {
                 FieldPos::Bit(bit_pos) => {
@@ -138,7 +139,7 @@ impl RegisterSpec {
                     }
                     if self.writable {
                         out.push_str(&format!("    pub fn assign(self, val: bool) -> &'a mut {} {{\n", self.regval_struct_name()));
-                        out.push_str(&format!("        self.0.0 &= !(!val as {} << {});\n", self.regval_word_name(), bit_pos));
+                        out.push_str(&format!("        self.0.0 &= !(!(val as {}) << {});\n", self.regval_word_name(), bit_pos));
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
                         out.push_str(&format!("    pub fn set_bit(self) -> &'a mut {} {{\n", self.regval_struct_name()));
@@ -157,9 +158,9 @@ impl RegisterSpec {
                         out.push_str(&format!("    }}\n"));
                     }
                     if self.writable {
-                        out.push_str(&format!("    pub fn set(&self, val: {}) -> &'a mut {} {{\n", field.field_pos.fieldpos_word(), self.regval_struct_name()));
+                        out.push_str(&format!("    pub fn set(self, val: {}) -> &'a mut {} {{\n", field.field_pos.fieldpos_word(), self.regval_struct_name()));
                         out.push_str(&format!("        self.0.0 &= !(!(!0 << {}) << {});\n", field_len, low));
-                        out.push_str(&format!("        self.0.0 |= (val as {} & !(!0 << {})) << {};\n", self.regval_word_name(), field_len, low));
+                        out.push_str(&format!("        self.0.0 |= ((val as {}) & !(!0 << {})) << {};\n", self.regval_word_name(), field_len, low));
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
                     }
