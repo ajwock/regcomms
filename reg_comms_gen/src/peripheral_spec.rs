@@ -65,6 +65,13 @@ impl PeripheralSpec {
         out.push_str(&format!("    pub fn comms_write(&mut self, reg_address: {}, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
         out.push_str(&format!("        self.0.comms_write(reg_address, buf)\n"));
         out.push_str(&format!("    }}\n"));
+        out.push_str(&format!("    pub async fn comms_read_async(&mut self, reg_address: {}, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
+        out.push_str(&format!("        self.0.comms_read_async(reg_address, buf).await\n"));
+        out.push_str(&format!("    }}\n"));
+        out.push_str(&format!("    pub async fn comms_write_async(&mut self, reg_address: {}, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
+        out.push_str(&format!("        self.0.comms_write_async(reg_address, buf).await\n"));
+        out.push_str(&format!("    }}\n"));
+
         for reg in self.registers.iter() {
             out.push_str(&format!("    pub fn {}<'a>(&'a mut self) -> {}::{}<'a, C> {{\n", reg.reg_method_name(), reg.reg_mod_name(), reg.reg_struct_name()));
             out.push_str(&format!("        {}::{}(self)\n", reg.reg_mod_name(), reg.reg_struct_name()));

@@ -95,6 +95,13 @@ impl RegisterSpec {
             out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
             out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
             out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn read_async(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
+            out.push_str(&format!("        self.0.comms_read_async(0x{:x}, &mut buf{}, {}).await?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
+            out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
+            out.push_str(&format!("    }}\n"));
+
         }
         if self.writable {
             out.push_str(&format!("    pub fn write(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
@@ -102,6 +109,12 @@ impl RegisterSpec {
             out.push_str(&format!("        self.0.comms_write(0x{:x}, &buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
             out.push_str(&format!("        Ok(())\n"));
             out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn write_async(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
+            out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
+            out.push_str(&format!("        self.0.comms_write_async(0x{:x}, &buf{}, {}).await?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        Ok(())\n"));
+            out.push_str(&format!("    }}\n"));
+
         }
         out.push_str(&format!("}}\n"));
 
