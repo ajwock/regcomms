@@ -6,7 +6,7 @@ edition = "2024"
 
 
 [dependencies]
-reg_comms = { path = "../reg_comms" }
+regcomms = { path = "../regcomms" }
 quantum_flux_sensor = { path = "../quantum_flux_sensor" }
 embassy-executor = { version = "0.7.0", features = ["arch-std", "executor-thread"] }
 embassy-sync = "0.6.2"

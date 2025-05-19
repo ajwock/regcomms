@@ -169,21 +169,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "reg_comms"
+name = "regcomms"
 version = "0.1.0"
 dependencies = [
  "embedded-hal",
 ]
 
 [[package]]
-name = "reg_comms_gen"
+name = "regcommsgen"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_yaml",
+ "stringcase",
+]
+
+[[package]]
+name = "regcommsgen_driver"
 version = "0.1.0"
 dependencies = [
  "clap",
  "clap_derive",
- "serde",
- "serde_yaml",
- "stringcase",
+ "regcommsgen",
 ]
 
 [[package]]

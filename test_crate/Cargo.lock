@@ -214,7 +214,7 @@ dependencies = [
 name = "quantum_flux_sensor"
 version = "0.1.0"
 dependencies = [
- "reg_comms",
+ "regcomms",
 ]
 
 [[package]]
@@ -227,7 +227,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "reg_comms"
+name = "regcomms"
 version = "0.1.0"
 
 [[package]]
@@ -261,7 +261,7 @@ dependencies = [
  "embassy-futures",
  "embassy-sync",
  "quantum_flux_sensor",
- "reg_comms",
+ "regcomms",
 ]
 
 [[package]]

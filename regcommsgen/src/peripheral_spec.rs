@@ -53,7 +53,7 @@ impl PeripheralSpec {
         for register in self.registers.iter() {
             out.push_str(&format!("mod {};\n", register.reg_mod_name()));
         }
-        out.push_str(&format!("use reg_comms::{{RegComms, RegCommsError}};\n"));
+        out.push_str(&format!("use regcomms::{{RegComms, RegCommsError}};\n"));
         out.push_str(&format!("pub enum AccessProc {{\n"));
         out.push_str(&format!("    Standard,\n"));
         out.push_str(&format!("}}\n"));
@@ -92,15 +92,15 @@ impl PeripheralSpec {
         out
     }
 
-    pub fn generate_cargo_toml(&self, reg_comms_path: Option<String>) -> String {
+    pub fn generate_cargo_toml(&self, regcomms_override: Option<String>) -> String {
         let mut out = String::new();
         out.push_str(&format!("[package]\n"));
         out.push_str(&format!("name = \"{}\"\n", self.peripheral_mod_name()));
         out.push_str(&format!("edition = \"2024\"\n"));
         out.push_str(&format!("version = \"0.1.0\"\n\n"));
         out.push_str(&format!("[dependencies]\n"));
-        let rcpath = reg_comms_path.unwrap_or("../reg_comms".to_string());
-        out.push_str(&format!("reg_comms = {{ path = \"{}\" }}\n", rcpath));
+        let rc_configs = regcomms_override.unwrap_or("{{ }}".to_string());
+        out.push_str(&format!("regcomms = {}\n", rc_configs));
         out
     }
 }

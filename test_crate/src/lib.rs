@@ -1,4 +1,4 @@
-use reg_comms::{RegCommsAddress, RegComms, RegCommsError};
+use regcomms::{RegCommsAddress, RegComms, RegCommsError};
 
 pub struct MockedComms {
     address_space: Vec<(u64, Vec<u8>)>,

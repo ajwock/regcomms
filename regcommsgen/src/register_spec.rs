@@ -83,7 +83,7 @@ impl RegisterSpec {
 
     pub fn generate_file(&self, pspec: &PeripheralSpec) -> String {
         let mut out = String::new();
-        out.push_str(&format!("use reg_comms::{{RegCommsError, RegComms}};\n"));
+        out.push_str(&format!("use regcomms::{{RegCommsError, RegComms}};\n"));
         out.push_str(&format!("use crate::{};\n", pspec.peripheral_struct_name()));
         out.push_str(&format!("pub struct {}<'a, C: RegComms{}>(pub &'a mut {}<C>);\n", self.reg_struct_name(), pspec.regcomms_params(), pspec.peripheral_struct_name()));
         out.push_str(&format!("impl<'a, C: RegComms{}> {}<'a, C> {{\n", pspec.regcomms_params(), self.reg_struct_name()));
