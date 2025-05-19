@@ -1,7 +1,16 @@
 [package]
 name = "regcomms"
+license-file = "LICENSE.txt"
+readme = "README.txt"
+description = "Supporting traits for crates created by regcommsgen"
+repository = "https://github.com/ajwock/regcomms.git"
+
+authors = ["Andrew Wock"]
 version = "0.1.0"
 edition = "2024"
+
+keywords = ["no_std", "embedded"]
+categories = ["embedded"]
 
 [features]
 embedded-hal = ["dep:embedded-hal"]
