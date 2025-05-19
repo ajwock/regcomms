@@ -1,26 +1,7 @@
 #![no_std]
 #![allow(async_fn_in_trait)]
 
-#[cfg(feature = "embedded_hal")]
-pub struct I2cComms<A: embedded_hal::i2c::AddressMode = embedded_hal::i2c::SevenBitAddress, I: embedded_hal::i2c::I2c<A>> {
-    comms: I,
-    i2c_address: A,
-}
-
-#[cfg(feature = "embedded_hal")]
-impl<A: embedded_hal::i2c::AddressMode, I: embedded_hal::i2c::I2c<A>, const N: usize, R: RegCommsAddress<N>> RegComms<R> for I2cComms<A, I> {
-    fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
-        let reg_address_bytes = reg_address.to_big_endian();
-        match self.comms.write_read(self.i2c_address, reg_address_bytes, buf) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(RegCommsError::Other),
-        }
-    }
-
-    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
-        todo!()
-    }
-}
+mod i2c;
 
 #[derive(Copy, Clone, Debug)]
 pub enum RegCommsError {
@@ -112,14 +93,5 @@ impl RegCommsAddress<8> for u64 {
     }
     fn from_little_endian(bytes: [u8; 8]) -> Self {
         Self::from_le_bytes(bytes)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
     }
 }

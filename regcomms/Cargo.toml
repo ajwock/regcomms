@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-embedded_hal = ["embedded-hal"]
 embedded-hal = ["dep:embedded-hal"]
+embedded-hal-async = ["dep:embedded-hal-async", "dep:futures"]
 
 [dependencies]
 embedded-hal = { version = "1.0.0", optional = true }
+embedded-hal-async = { version = "1.0.0", optional = true }
+futures = { version = "0.3.31", features = ["async-await", "executor"], optional = true }
