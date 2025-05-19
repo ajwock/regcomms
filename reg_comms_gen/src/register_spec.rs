@@ -75,7 +75,7 @@ impl RegisterSpec {
     }
 
     pub fn access_proc_enum(&self) -> String {
-        let Some(ref proc) = self.access_proc else {
+        let Some(ref _proc) = self.access_proc else {
             return "crate::AccessProc::Standard".to_string()
         };
         todo!()
@@ -139,7 +139,8 @@ impl RegisterSpec {
                     }
                     if self.writable {
                         out.push_str(&format!("    pub fn assign(self, val: bool) -> &'a mut {} {{\n", self.regval_struct_name()));
-                        out.push_str(&format!("        self.0.0 &= !(!(val as {}) << {});\n", self.regval_word_name(), bit_pos));
+                        out.push_str(&format!("        self.0.0 &= !(1 << {});\n", bit_pos));
+                        out.push_str(&format!("        self.0.0 |= !(!(val as {}) << {});\n", self.regval_word_name(), bit_pos));
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
                         out.push_str(&format!("    pub fn set_bit(self) -> &'a mut {} {{\n", self.regval_struct_name()));
@@ -154,13 +155,22 @@ impl RegisterSpec {
                     let field_len = high - low + 1;
                     if self.readable {
                         out.push_str(&format!("    pub fn bits(&self) -> {} {{\n", field.field_pos.fieldpos_word()));
-                        out.push_str(&format!("        ((self.0.0 >> {}) & !(!0 << {})) as {}\n", low, field_len, field.field_pos.fieldpos_word()));
+                        if field_len == self.regval_word_size() * 8 {
+                            out.push_str(&format!("        self.0.0\n"));
+                        } else {
+                            out.push_str(&format!("        ((self.0.0 >> {}) & !(!0 << {})) as {}\n", low, field_len, field.field_pos.fieldpos_word()));
+                        }
                         out.push_str(&format!("    }}\n"));
                     }
                     if self.writable {
                         out.push_str(&format!("    pub fn set(self, val: {}) -> &'a mut {} {{\n", field.field_pos.fieldpos_word(), self.regval_struct_name()));
-                        out.push_str(&format!("        self.0.0 &= !(!(!0 << {}) << {});\n", field_len, low));
-                        out.push_str(&format!("        self.0.0 |= ((val as {}) & !(!0 << {})) << {};\n", self.regval_word_name(), field_len, low));
+                        if field_len == self.regval_word_size() * 8 {
+                            out.push_str(&format!("        self.0.0 = val;\n"));
+                        } else {
+                            out.push_str(&format!("        self.0.0 &= !(!(!0 << {}) << {});\n", field_len, low));
+                            out.push_str(&format!("        self.0.0 |= ((val as {}) & !(!0 << {})) << {};\n", self.regval_word_name(), field_len, low));
+
+                        }
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
                     }

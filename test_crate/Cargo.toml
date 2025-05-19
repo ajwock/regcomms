@@ -1,0 +1,12 @@
+[package]
+name = "test_crate"
+version = "0.1.0"
+edition = "2024"
+
+
+
+[dependencies]
+reg_comms = { path = "../reg_comms" }
+quantum_flux_sensor = { path = "../quantum_flux_sensor" }
+
+[workspace]

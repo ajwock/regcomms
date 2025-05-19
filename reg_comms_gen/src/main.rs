@@ -4,18 +4,15 @@ mod peripheral_spec;
 mod endian;
 mod opts;
 
-use register_spec::RegisterSpec;
-use field_spec::{
-    FieldSpec,
-    FieldPos,
-};
-use peripheral_spec::PeripheralSpec;
-use endian::Endian;
 use opts::Opts;
 use std::fs::File;
-use std::io::{BufReader, BufRead, Write};
+use std::io::{BufReader, Write};
 use clap::Parser;
+use peripheral_spec::PeripheralSpec;
 
+/*
+use register_spec::RegisterSpec;
+use field_spec::{FieldSpec, FieldPost};
 fn test_routine() {
     let peripheral_spec = PeripheralSpec {
         name: "MyPeripheral".to_string(),
@@ -45,7 +42,7 @@ fn test_routine() {
     };
     let yaml_string = serde_yaml::to_string(&peripheral_spec).unwrap();
     println!("yaml registers:\n{}", yaml_string);
-    let parsed_back: PeripheralSpec = serde_yaml::from_str(&yaml_string).unwrap();
+    let parsed_back): PeripheralSpec = serde_yaml::from_str(&yaml_string).unwrap();
     println!("Parsed back: {:?}", parsed_back);
     let spec_string = r#"
 name: MyPeripheral
@@ -67,9 +64,9 @@ registers:
     let parsed: PeripheralSpec = serde_yaml::from_str(spec_string).unwrap();
     let codegen = parsed.registers[0].generate_file(&parsed);
     println!("Code generated:\n{}", codegen);
-    let modrs = parsed.generate_modrs();
-    println!("Code generated:\n{}", modrs);
-}
+    let librs = parsed.generate_librs();
+    println!("Code generated:\n{}", librs);
+}*/
 
 fn main() {
     let opts = Opts::parse();
@@ -77,8 +74,12 @@ fn main() {
     let yaml_reader = BufReader::new(yaml_file);
     let peripheral_spec: PeripheralSpec = serde_yaml::from_reader(yaml_reader).unwrap();
     let peripheral_mod = peripheral_spec.generate_module();
+    let _ = std::fs::remove_dir_all(&opts.output_directory);
+    std::fs::create_dir_all(format!("{}/src", &opts.output_directory)).unwrap();
     for (filename, file_contents) in peripheral_mod {
-        let mut outfile = File::create(format!("{}/{}", opts.output_directory, filename)).unwrap();
+        let mut outfile = File::create(format!("{}/src/{}", &opts.output_directory, filename)).unwrap();
         outfile.write_all(file_contents.as_bytes()).unwrap();
     }
+    let mut outfile = File::create(format!("{}/Cargo.toml", &opts.output_directory)).unwrap();
+    outfile.write_all(peripheral_spec.generate_cargo_toml(opts.reg_comms_path.clone()).as_bytes()).unwrap();
 }

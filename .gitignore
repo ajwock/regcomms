@@ -1,1 +1,4 @@
-/target
+target
+lsm6dsv
+test_crate/target
+quantum_flux_sensor

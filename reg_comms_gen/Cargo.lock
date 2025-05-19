@@ -99,10 +99,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
-name = "embedded-hal"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "361a90feb7004eca4019fb28352a9465666b24f840f5c3cddf0ff13920590b89"
+name = "comms_register"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "clap_derive",
+ "serde",
+ "serde_yaml",
+ "stringcase",
+]
 
 [[package]]
 name = "equivalent"
@@ -166,24 +171,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1885c039570dc00dcb4ff087a89e185fd56bae234ddc7f056a945bf36467248d"
 dependencies = [
  "proc-macro2",
-]
-
-[[package]]
-name = "reg_comms"
-version = "0.1.0"
-dependencies = [
- "embedded-hal",
-]
-
-[[package]]
-name = "reg_comms_gen"
-version = "0.1.0"
-dependencies = [
- "clap",
- "clap_derive",
- "serde",
- "serde_yaml",
- "stringcase",
 ]
 
 [[package]]
