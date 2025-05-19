@@ -1,5 +1,4 @@
 use reg_comms::{RegCommsAddress, RegComms, RegCommsError};
-use quantum_flux_sensor::QuantumFluxSensor;
 
 pub struct MockedComms {
     address_space: Vec<(u64, Vec<u8>)>,
@@ -43,6 +42,7 @@ impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedComms {
 #[cfg(test)]
 mod test {
     use super::*;
+    use quantum_flux_sensor::QuantumFluxSensor;
 
     #[test]
     fn test_quantum_flux_sensor() {
@@ -66,4 +66,64 @@ mod test {
         fifo_config.fifo_en().set_bit();
         assert_eq!(fifo_config.get(), 0b10100111);
    }
+
+
+    async fn embassy_test() {
+        let comm_peripheral = MockedComms::new(vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]);
+        let mut sensor = QuantumFluxSensor(comm_peripheral);
+        let mut power_mode = sensor.power_mode().read_async().await.unwrap();
+        assert_eq!(power_mode.pulsed().bit_is_set(), false);
+        assert_eq!(power_mode.poweron_mode().bits(), 0);
+        let mut fifo_config = sensor.fifo_config().read_async().await.unwrap();
+        assert_eq!(fifo_config.fifo_src().bits(), 0x7);
+        assert_eq!(fifo_config.fifo_en().bit_is_set(), false);
+        assert_eq!(fifo_config.fifo_fmt().bits(), 0x3);
+        assert_eq!(fifo_config.get(), 0b11100011);
+        fifo_config.fifo_src().set(0x5);
+        assert_eq!(fifo_config.get(), 0b10100011);
+        fifo_config.fifo_fmt().set(0);
+        assert_eq!(fifo_config.get(), 0b10100000);
+        // We should just casually ignore the over-step here
+        fifo_config.fifo_fmt().set(0xff);
+        assert_eq!(fifo_config.get(), 0b10100011);
+        fifo_config.fifo_en().set_bit();
+        assert_eq!(fifo_config.get(), 0b10100111);
+    }
+
+    use embassy_sync::signal::Signal;
+    use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+    use core::future::Future;
+    use core::task::Poll;
+    async fn signal_pass<F: FnOnce() -> Fut, Fut: Future<Output = ()>>(signal: &'static Signal<CriticalSectionRawMutex, ()>, test_fn: F) {
+        test_fn().await;
+        signal.signal(());
+    }
+
+    #[embassy_executor::task]
+    async fn embassy_test_task(signal: &'static Signal<CriticalSectionRawMutex, ()>) {
+        signal_pass(&signal, async || embassy_test().await).await;
+    }
+
+    #[test]
+    fn embassy_concurrency_test() {
+        static TEST_SIGNAL: Signal<CriticalSectionRawMutex, ()> = Signal::new();
+        let handle = std::thread::spawn(|| {
+            let executor = Box::leak(Box::new(embassy_executor::Executor::new()));
+            executor.run(|spawner| {
+                spawner.spawn(embassy_test_task(&TEST_SIGNAL)).unwrap();
+            });
+        });
+        loop {
+            match embassy_futures::poll_once(TEST_SIGNAL.wait()) {
+                Poll::Ready(()) => break,
+                Poll::Pending => (),
+            }
+            if handle.is_finished() {
+                match handle.join() {
+                    Ok(()) => panic!("Did not recieve pass signal but executor thread joined anyway"),
+                    Err(e) => std::panic::resume_unwind(e),
+                }
+            }
+        }
+    }
 }
