@@ -1,0 +1,14 @@
+[package]
+name = "quantum_flux_sensor2"
+edition = "2024"
+version = "0.1.0"
+build = "build.rs"
+
+
+[build-dependencies]
+regcommsgen = { path = "../regcommsgen" }
+
+[dependencies]
+regcomms = { path = "../regcomms" }
+
+[workspace]
