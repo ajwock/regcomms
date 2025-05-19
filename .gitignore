@@ -1,4 +1,4 @@
 target
 lsm6dsv
 test_crate/target
-quantum_flux_sensor
+quantum_flux_sensor/src/*
