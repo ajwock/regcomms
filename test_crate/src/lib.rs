@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use regcomms::{RegCommsAddress, RegComms, RegCommsError};
 
 pub struct MockedComms {
@@ -34,7 +35,7 @@ impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedComms {
         self.read_address(u64_address, buf).map(|_| ())
     }
 
-    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn comms_write(&mut self, _reg_address: R, _buf: &[u8]) -> Result<(), RegCommsError> {
         todo!()
     }
 }
