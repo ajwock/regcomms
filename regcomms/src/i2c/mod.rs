@@ -62,7 +62,7 @@ pub struct I2cCommsAsync<A: Copy + Default + embedded_hal_async::i2c::AddressMod
     i2c_address: A,
 }
 
-#[cfg(feature = "embedded-hal")]
+#[cfg(feature = "embedded-hal-async")]
 impl<A: Copy + Default + embedded_hal_async::i2c::AddressMode, I: embedded_hal_async::i2c::I2c<A>> I2cCommsAsync<A, I> {
     pub fn new(comms: I) -> Self {
         Self {
