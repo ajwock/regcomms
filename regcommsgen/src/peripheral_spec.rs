@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use crate::register_spec::RegisterSpec;
 use crate::endian::Endian;
+use crate::access_proc::AccessProcSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PeripheralSpec {
@@ -8,6 +9,9 @@ pub struct PeripheralSpec {
     pub address_len: u8,
     pub byte_order: Endian,
     pub registers: Vec<RegisterSpec>,
+    // Map from name for an enum variant for AccessProc to fully qualified function name taking
+    // the named peripheral, reg address, and buffer
+    pub non_standard_access_procs: Option<Vec<AccessProcSpec>>,
 }
 
 impl PeripheralSpec {
@@ -48,32 +52,80 @@ impl PeripheralSpec {
         format!("<{}, {}>", self.address_word_size(), self.address_word_name())
     }
 
+    fn get_standard_access_proc_spec(&self) -> AccessProcSpec {
+        AccessProcSpec {
+            proc_name: String::from("Standard"),
+            struct_path: String::from("StandardAccessProc"),
+        }
+    }
+
+    pub fn get_access_proc_member_name(&self, access_proc_maybe: &Option<String>) -> String {
+        if let Some(access_proc_name) = access_proc_maybe {
+            let procs_map = self.get_access_procs_map();
+            let Some(access_proc) = procs_map.iter().find(|x| x.proc_name.as_str() == access_proc_name) else {
+                panic!("Got nonstandard access proc \'{access_proc_name}\' that does not match any access proc in peripheral proc list: {:?}", self.get_access_procs_map());
+            };
+            access_proc.member_name()
+        } else {
+            self.get_standard_access_proc_spec().member_name()
+        }
+    }
+
+    fn get_access_procs_map(&self) -> Vec<AccessProcSpec> {
+        let mut full_list = if let Some(ref list) = self.non_standard_access_procs {
+            list.clone()
+        } else {
+            Vec::new()
+        };
+        full_list.push(self.get_standard_access_proc_spec());
+        full_list
+    }
+
     pub fn generate_librs(&self) -> String {
         let mut out = String::new();
         out.push_str(&format!("#![no_std]\n"));
         out.push_str(&format!("use core::result::Result;\n"));
+        out.push_str(&format!("use core::default::Default;\n"));
         for register in self.registers.iter() {
             out.push_str(&format!("mod {};\n", register.reg_mod_name()));
         }
-        out.push_str(&format!("use regcomms::{{RegComms, RegCommsError}};\n"));
-        out.push_str(&format!("pub enum AccessProc {{\n"));
-        out.push_str(&format!("    Standard,\n"));
+        out.push_str(&format!("use regcomms::{{RegComms, RegCommsError, RegCommsAccessProc}};\n"));
+        out.push_str(&format!("use spin::once::Once;\n"));
+        let standard = self.get_standard_access_proc_spec();
+        out.push_str(&format!("#[derive(Default)]\n"));
+        out.push_str(&format!("pub struct {};\n", standard.struct_path()));
+        out.push_str(&format!("impl<C: RegComms{}> RegCommsAccessProc<{}<C>, {}, {}> for {} {{\n", self.regcomms_params(), self.peripheral_struct_name(), self.address_word_size(), self.address_word_name(), standard.struct_path()));
+        out.push_str(&format!("    fn proc_read(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("        peripheral.comms.comms_read(reg_address, buf)\n"));
+        out.push_str(&format!("    }}\n"));
+        out.push_str(&format!("    async fn proc_read_async(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("        peripheral.comms.comms_read_async(reg_address, buf).await\n"));
+        out.push_str(&format!("    }}\n"));
+        out.push_str(&format!("    fn proc_write(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("        peripheral.comms.comms_write(reg_address, buf)\n"));
+        out.push_str(&format!("    }}\n"));
+        out.push_str(&format!("    async fn proc_write_async(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("        peripheral.comms.comms_write_async(reg_address, buf).await\n"));
+        out.push_str(&format!("    }}\n"));
         out.push_str(&format!("}}\n"));
-        out.push_str(&format!("pub struct {}<C: RegComms<{}, {}>>(pub C);\n", self.peripheral_struct_name(), self.address_word_size(), self.address_word_name()));
+        for proc in self.get_access_procs_map() {
+            out.push_str(&format!("static {}: Once<{}> = Once::new();\n", proc.static_name(), proc.struct_path()));
+        }
+        out.push_str(&format!("pub struct {}<C: RegComms{}> {{\n", self.peripheral_struct_name(), self.regcomms_params()));
+        out.push_str(&format!("    comms: C,\n"));
+        for proc in self.get_access_procs_map() {
+            out.push_str(&format!("    {}: &'static {},\n", proc.member_name(), proc.struct_path()));
+        }
+        out.push_str(&format!("}}\n"));
         out.push_str(&format!("impl<C: RegComms{}> {}<C> {{\n", self.regcomms_params(), self.peripheral_struct_name()));
-        out.push_str(&format!("    pub fn comms_read(&mut self, reg_address: {}, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
-        out.push_str(&format!("        self.0.comms_read(reg_address, buf)\n"));
+        out.push_str(&format!("    pub fn new(comms: C) -> Self {{\n"));
+        out.push_str(&format!("        Self {{\n"));
+        out.push_str(&format!("            comms,\n"));
+        for proc in self.get_access_procs_map() {
+            out.push_str(&format!("            {}: {}.call_once(|| Default::default()),\n", proc.member_name(), proc.static_name()));
+        }
+        out.push_str(&format!("        }}\n"));
         out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    pub fn comms_write(&mut self, reg_address: {}, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
-        out.push_str(&format!("        self.0.comms_write(reg_address, buf)\n"));
-        out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    pub async fn comms_read_async(&mut self, reg_address: {}, buf: &mut [u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
-        out.push_str(&format!("        self.0.comms_read_async(reg_address, buf).await\n"));
-        out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    pub async fn comms_write_async(&mut self, reg_address: {}, buf: &[u8], _access_proc: AccessProc) -> Result<(), RegCommsError> {{\n", self.address_word_name()));
-        out.push_str(&format!("        self.0.comms_write_async(reg_address, buf).await\n"));
-        out.push_str(&format!("    }}\n"));
-
         for reg in self.registers.iter() {
             out.push_str(&format!("    pub fn {}<'a>(&'a mut self) -> {}::{}<'a, C> {{\n", reg.reg_method_name(), reg.reg_mod_name(), reg.reg_struct_name()));
             out.push_str(&format!("        {}::{}(self)\n", reg.reg_mod_name(), reg.reg_struct_name()));

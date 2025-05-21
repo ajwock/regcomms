@@ -74,17 +74,10 @@ impl RegisterSpec {
         format!("[{low}..{high}]")
     }
 
-    pub fn access_proc_enum(&self) -> String {
-        let Some(ref _proc) = self.access_proc else {
-            return "crate::AccessProc::Standard".to_string()
-        };
-        todo!()
-    }
-
     pub fn generate_file(&self, pspec: &PeripheralSpec) -> String {
         let mut out = String::new();
         out.push_str(&format!("use core::result::Result;\n"));
-        out.push_str(&format!("use regcomms::{{RegCommsError, RegComms}};\n"));
+        out.push_str(&format!("use regcomms::{{RegCommsError, RegComms, RegCommsAccessProc}};\n"));
         out.push_str(&format!("use crate::{};\n", pspec.peripheral_struct_name()));
         out.push_str(&format!("pub struct {}<'a, C: RegComms{}>(pub &'a mut {}<C>);\n", self.reg_struct_name(), pspec.regcomms_params(), pspec.peripheral_struct_name()));
         out.push_str(&format!("impl<'a, C: RegComms{}> {}<'a, C> {{\n", pspec.regcomms_params(), self.reg_struct_name()));
@@ -92,27 +85,30 @@ impl RegisterSpec {
         if self.readable {
             out.push_str(&format!("    pub fn read(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
-            out.push_str(&format!("        self.0.comms_read(0x{:x}, &mut buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
+            out.push_str(&format!("        proc.proc_read(&mut self.0, 0x{:x}, &mut buf{})?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
             out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
             out.push_str(&format!("    }}\n"));
             out.push_str(&format!("    pub async fn read_async(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
-            out.push_str(&format!("        self.0.comms_read_async(0x{:x}, &mut buf{}, {}).await?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
+            out.push_str(&format!("        proc.proc_read_async(&mut self.0, 0x{:x}, &mut buf{}).await?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
             out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
             out.push_str(&format!("    }}\n"));
-
         }
         if self.writable {
             out.push_str(&format!("    pub fn write(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
-            out.push_str(&format!("        self.0.comms_write(0x{:x}, &buf{}, {})?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
+            out.push_str(&format!("        proc.proc_write(&mut self.0, 0x{:x}, &buf{})?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        Ok(())\n"));
             out.push_str(&format!("    }}\n"));
             out.push_str(&format!("    pub async fn write_async(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
-            out.push_str(&format!("        self.0.comms_write_async(0x{:x}, &buf{}, {}).await?;\n", self.address, self.commsbuf_subscript(endian), self.access_proc_enum()));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
+            out.push_str(&format!("        proc.proc_write_async(&mut self.0, 0x{:x}, &buf{}).await?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        Ok(())\n"));
             out.push_str(&format!("    }}\n"));
 

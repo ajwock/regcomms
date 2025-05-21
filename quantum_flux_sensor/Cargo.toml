@@ -10,3 +10,4 @@ regcommsgen = { path = "../regcommsgen" }
 
 [dependencies]
 regcomms = { path = "../regcomms" }
+spin = { version = "0.10.0", features = ["once"] }

@@ -7,6 +7,9 @@ pub mod i2c;
 #[cfg(any(feature = "embedded-hal-async"))]
 mod blockon;
 
+use core::default::Default;
+use core::result::Result;
+
 #[derive(Copy, Clone, Debug)]
 pub enum RegCommsError {
     Other,
@@ -97,5 +100,16 @@ impl RegCommsAddress<8> for u64 {
     }
     fn from_little_endian(bytes: [u8; 8]) -> Self {
         Self::from_le_bytes(bytes)
+    }
+}
+
+pub trait RegCommsAccessProc<Peripheral, const N: usize, R: RegCommsAddress<N>>: Default + Send + Sync {
+    fn proc_read(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError>;
+    async fn proc_read_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
+        self.proc_read(peripheral, reg_address, buf)
+    }
+    fn proc_write(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError>;
+    async fn proc_write_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
+        self.proc_write(peripheral, reg_address, buf)
     }
 }

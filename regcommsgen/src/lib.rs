@@ -1,6 +1,7 @@
 mod register_spec;
 mod field_spec;
 mod peripheral_spec;
+mod access_proc;
 mod endian;
 
 use std::fs::File;

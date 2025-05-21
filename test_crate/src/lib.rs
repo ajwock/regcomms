@@ -48,7 +48,7 @@ mod test {
     #[test]
     fn test_quantum_flux_sensor() {
         let comm_peripheral = MockedComms::new(vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]);
-        let mut sensor = QuantumFluxSensor(comm_peripheral);
+        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
         let mut power_mode = sensor.power_mode().read().unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);
         assert_eq!(power_mode.poweron_mode().bits(), 0);
@@ -89,7 +89,7 @@ mod test {
 
     async fn embassy_test() {
         let comm_peripheral = MockedComms::new(vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]);
-        let mut sensor = QuantumFluxSensor(comm_peripheral);
+        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
         let mut power_mode = sensor.power_mode().read_async().await.unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);
         assert_eq!(power_mode.poweron_mode().bits(), 0);
