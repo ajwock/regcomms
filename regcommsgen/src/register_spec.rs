@@ -128,6 +128,16 @@ impl RegisterSpec {
             out.push_str(&format!("    }}\n"));
 
         }
+        if self.writable {
+            if let Some(val) = self.reset_val {
+                out.push_str(&format!("    pub fn reset(&mut self) -> Result<(), RegCommsError> {{\n"));
+                out.push_str(&format!("        self.write({}(0x{:x}))\n", self.regval_struct_name(), val));
+                out.push_str(&format!("    }}\n"));
+                out.push_str(&format!("    pub async fn reset_async(&mut self) -> Result<(), RegCommsError> {{\n"));
+                out.push_str(&format!("        self.write_async({}(0x{:x})).await\n", self.regval_struct_name(), val));
+                out.push_str(&format!("    }}\n"));
+            }
+        }
         out.push_str(&format!("}}\n"));
 
         // Regval struct generation
@@ -138,7 +148,15 @@ impl RegisterSpec {
         out.push_str(&format!("    }}\n"));
         if self.writable {
             out.push_str(&format!("    pub fn zero() -> Self {{\n"));
-            out.push_str(&format!("         Self(0)\n"));
+            out.push_str(&format!("        Self(0)\n"));
+            out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub fn set(&mut self, val: {}) {{\n", self.regval_word_name()));
+            out.push_str(&format!("        self.0 = val;\n"));
+            out.push_str(&format!("    }}\n"));
+        }
+        if let Some(val) = self.reset_val {
+            out.push_str(&format!("    pub fn reset_val() -> Self {{\n"));
+            out.push_str(&format!("        Self(0x{:x})\n", val));
             out.push_str(&format!("    }}\n"));
         }
         for field in self.fields.iter() {
@@ -174,6 +192,13 @@ impl RegisterSpec {
                         out.push_str(&format!("    pub fn clear_bit(self) -> &'a mut {} {{\n", self.regval_struct_name()));
                         out.push_str(&format!("        self.assign(false)\n"));
                         out.push_str(&format!("    }}\n"));
+                        if let Some(val) = self.reset_val {
+                            out.push_str(&format!("    pub fn reset(self) -> &'a mut {} {{\n", self.regval_struct_name()));
+                            out.push_str(&format!("        self.0.0 &= !(1 << {});\n", bit_pos));
+                            out.push_str(&format!("        self.0.0 |= (1 << {}) & 0x{:x};\n", bit_pos, val));
+                            out.push_str(&format!("        self.0\n"));
+                            out.push_str(&format!("    }}\n"));
+                        }
                     }
                 }
                 FieldPos::Field(high, low) => {
@@ -198,6 +223,17 @@ impl RegisterSpec {
                         }
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
+                        if let Some(reset_val) = self.reset_val {
+                                out.push_str(&format!("    pub fn reset(self) -> &'a mut {} {{\n", self.regval_struct_name()));
+                            if field_len == self.regval_word_size() * 8 {
+                                out.push_str(&format!("        self.0.0 = 0x{:x};\n", reset_val));
+                            } else {
+                                out.push_str(&format!("        self.0.0 &= !(!(!0 << {}) << {});\n", field_len, low));
+                                out.push_str(&format!("        self.0.0 |= 0x{:x} & (!(!0 << {}) << {});\n", reset_val, field_len, low));
+                            }
+                            out.push_str(&format!("        self.0\n"));
+                            out.push_str(&format!("    }}\n"));
+                        }
                     }
                 }
             }

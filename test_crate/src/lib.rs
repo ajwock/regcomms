@@ -66,6 +66,24 @@ mod test {
         assert_eq!(fifo_config.get(), 0b10100011);
         fifo_config.fifo_en().set_bit();
         assert_eq!(fifo_config.get(), 0b10100111);
+        fifo_config.fifo_fmt().set(0);
+        assert_eq!(fifo_config.get(), 0b10100100);
+        fifo_config.fifo_fmt().reset();
+        assert_eq!(fifo_config.get(), 0b10100111);
+        fifo_config.fifo_src().set(0b010);
+        assert_eq!(fifo_config.get(), 0b01000111);
+        fifo_config.fifo_fmt().set(0b10);
+        assert_eq!(fifo_config.get(), 0b01000110);
+        fifo_config.fifo_src().reset();
+        assert_eq!(fifo_config.get(), 0b11100110);
+        fifo_config.fifo_en().reset();
+        assert_eq!(fifo_config.get(), 0b11100010);
+        fifo_config.fifo_decimation().set(0b11);
+        assert_eq!(fifo_config.get(), 0b11111010);
+        fifo_config.fifo_decimation().reset();
+        assert_eq!(fifo_config.get(), 0b11100010);
+        fifo_config.set(0);
+        assert_eq!(fifo_config.get(), 0);
    }
 
 

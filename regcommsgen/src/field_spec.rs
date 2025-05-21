@@ -100,6 +100,6 @@ impl FieldSpec {
     }
 
     pub fn struct_name(&self) -> String {
-        stringcase::pascal_case(&self.name)
+        format!("Field{}", stringcase::pascal_case(&self.name))
     }
 }
