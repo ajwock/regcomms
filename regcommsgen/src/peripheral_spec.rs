@@ -50,6 +50,8 @@ impl PeripheralSpec {
 
     pub fn generate_librs(&self) -> String {
         let mut out = String::new();
+        out.push_str(&format!("#![no_std]\n"));
+        out.push_str(&format!("use core::result::Result;\n"));
         for register in self.registers.iter() {
             out.push_str(&format!("mod {};\n", register.reg_mod_name()));
         }

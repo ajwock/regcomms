@@ -1,4 +1,3 @@
-#![allow(unused_imports)]
 use crate::{
     RegComms,
     RegCommsAddress,
@@ -32,6 +31,9 @@ impl<A: Copy + embedded_hal::i2c::AddressMode, I: embedded_hal::i2c::I2c<A>, con
 }
 
 #[cfg(feature = "embedded-hal-async")]
+use crate::blockon::block_on;
+
+#[cfg(feature = "embedded-hal-async")]
 pub struct I2cCommsAsync<A: Copy + embedded_hal_async::i2c::AddressMode, I: embedded_hal_async::i2c::I2c<A>> {
     comms: I,
     i2c_address: A,
@@ -41,11 +43,11 @@ pub struct I2cCommsAsync<A: Copy + embedded_hal_async::i2c::AddressMode, I: embe
 impl<A: Copy + embedded_hal_async::i2c::AddressMode, I: embedded_hal_async::i2c::I2c<A>, const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for I2cCommsAsync<A, I> {
 
     fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
-        futures::executor::block_on(self.comms_read_async(reg_address, buf))
+        block_on(self.comms_read_async(reg_address, buf))
     }
 
     fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
-        futures::executor::block_on(self.comms_write_async(reg_address, buf))
+        block_on(self.comms_write_async(reg_address, buf))
     }
 
     async fn comms_read_async(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {

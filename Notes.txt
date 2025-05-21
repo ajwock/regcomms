@@ -1,0 +1,9 @@
+Bug:
+
+If field has same name as register, we get errors
+Need to add field qualifier to struct
+
+Features:
+- readable, writable should default to false and be specified true if valid
+- Endianness per register should be allowed- icm42670p, my first real peripheral, has an example
+  of register breaknig endianness convention (APEX_DATA4, APEX_DATA5)
