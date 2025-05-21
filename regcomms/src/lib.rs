@@ -2,7 +2,7 @@
 #![allow(async_fn_in_trait)]
 
 #[cfg(any(feature = "embedded-hal", feature = "embedded-hal-async"))]
-mod i2c;
+pub mod i2c;
 
 #[cfg(any(feature = "embedded-hal-async"))]
 mod blockon;
