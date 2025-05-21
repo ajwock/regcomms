@@ -117,6 +117,17 @@ impl RegisterSpec {
             out.push_str(&format!("    }}\n"));
 
         }
+        if self.readable && self.writable {
+            out.push_str(&format!("    pub fn modify<F: FnOnce({}) -> {}>(&mut self, f: F) -> Result<(), RegCommsError> {{\n", self.regval_struct_name(), self.regval_struct_name()));
+            out.push_str(&format!("        let orig_val = self.read()?;\n"));
+            out.push_str(&format!("        self.write(f(orig_val))\n"));
+            out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn modify_async<F: FnOnce({}) -> {}>(&mut self, f: F) -> Result<(), RegCommsError> {{\n", self.regval_struct_name(), self.regval_struct_name()));
+            out.push_str(&format!("        let orig_val = self.read_async().await?;\n"));
+            out.push_str(&format!("        self.write_async(f(orig_val)).await\n"));
+            out.push_str(&format!("    }}\n"));
+
+        }
         out.push_str(&format!("}}\n"));
 
         // Regval struct generation
