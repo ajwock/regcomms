@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 use crate::register_spec::RegisterSpec;
 use crate::endian::Endian;
 use crate::access_proc::AccessProcSpec;
+use crate::trait_member::TraitMember;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PeripheralSpec {
@@ -14,6 +15,11 @@ pub struct PeripheralSpec {
     pub non_standard_access_procs: Option<Vec<AccessProcSpec>>,
     // Extra mods that may need to be included for non_standard_procs
     pub extra_mods: Option<Vec<String>>,
+    // Generate a member for the peripheral to hold and take as constructor argument.
+    // It will be a generic with the given trait bound.
+    // Useful for access procs
+    // e.g. embedded_hal_async::delay::DelayNs
+    pub trait_members: Option<Vec<TraitMember>>,
 }
 
 impl PeripheralSpec {
@@ -83,6 +89,49 @@ impl PeripheralSpec {
         full_list
     }
 
+    fn get_regcomms_trait_member(&self) -> TraitMember {
+        TraitMember {
+            name: "comms".to_string(),
+            generic_type: "C".to_string(),
+            trait_bound: format!("RegComms{}", self.regcomms_params()),
+        }
+    }
+
+    fn get_trait_members_list(&self) -> Vec<TraitMember> {
+        let mut full_list = if let Some(ref list) = self.trait_members {
+            list.clone()
+        } else {
+            Vec::new()
+        };
+        full_list.push(self.get_regcomms_trait_member());
+        full_list
+    }
+
+    pub fn get_generics_string(&self) -> String {
+        itertools::join(
+            self.get_trait_members_list().iter()
+                .map(|t| format!("{}: {}", t.generic(), t.bound())),
+        ",")
+    }
+
+    pub fn get_boundfree_generics(&self) -> String {
+        itertools::join(
+            self.get_trait_members_list().iter()
+                .map(|t| t.generic()),
+        ",")
+    }
+
+    pub fn get_constructor_args_list(&self) -> String {
+        itertools::join(
+            self.get_trait_members_list().iter()
+                .map(|t| format!("{}: {}", t.member_name(), t.generic())),
+        ",")
+    }
+    
+    pub fn get_parameterized_typename(&self) -> String {
+        format!("{}<{}>", self.peripheral_struct_name(), self.get_boundfree_generics())
+    }
+
     pub fn generate_librs(&self) -> String {
         let mut out = String::new();
         out.push_str(&format!("#![no_std]\n"));
@@ -99,40 +148,44 @@ impl PeripheralSpec {
         let standard = self.get_standard_access_proc_spec();
         out.push_str(&format!("#[derive(Default)]\n"));
         out.push_str(&format!("pub struct {};\n", standard.struct_path()));
-        out.push_str(&format!("impl<C: RegComms{}> RegCommsAccessProc<{}<C>, {}, {}> for {} {{\n", self.regcomms_params(), self.peripheral_struct_name(), self.address_word_size(), self.address_word_name(), standard.struct_path()));
-        out.push_str(&format!("    fn proc_read(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("impl<{}> RegCommsAccessProc<{}, {}, {}> for {} {{\n", self.get_generics_string(), self.get_parameterized_typename(), self.address_word_size(), self.address_word_name(), standard.struct_path()));
+        out.push_str(&format!("    fn proc_read(&self, peripheral: &mut {}, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.get_parameterized_typename(), self.address_word_name()));
         out.push_str(&format!("        peripheral.comms.comms_read(reg_address, buf)\n"));
         out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    async fn proc_read_async(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("    async fn proc_read_async(&self, peripheral: &mut {}, reg_address: {}, buf: &mut [u8]) -> Result<(), RegCommsError> {{\n", self.get_parameterized_typename(), self.address_word_name()));
         out.push_str(&format!("        peripheral.comms.comms_read_async(reg_address, buf).await\n"));
         out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    fn proc_write(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("    fn proc_write(&self, peripheral: &mut {}, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.get_parameterized_typename(), self.address_word_name()));
         out.push_str(&format!("        peripheral.comms.comms_write(reg_address, buf)\n"));
         out.push_str(&format!("    }}\n"));
-        out.push_str(&format!("    async fn proc_write_async(&self, peripheral: &mut {}<C>, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.peripheral_struct_name(), self.address_word_name()));
+        out.push_str(&format!("    async fn proc_write_async(&self, peripheral: &mut {}, reg_address: {}, buf: &[u8]) -> Result<(), RegCommsError> {{\n", self.get_parameterized_typename(), self.address_word_name()));
         out.push_str(&format!("        peripheral.comms.comms_write_async(reg_address, buf).await\n"));
         out.push_str(&format!("    }}\n"));
         out.push_str(&format!("}}\n"));
         for proc in self.get_access_procs_map() {
             out.push_str(&format!("static {}: Once<{}> = Once::new();\n", proc.static_name(), proc.struct_path()));
         }
-        out.push_str(&format!("pub struct {}<C: RegComms{}> {{\n", self.peripheral_struct_name(), self.regcomms_params()));
-        out.push_str(&format!("    comms: C,\n"));
+        out.push_str(&format!("pub struct {}<{}> {{\n", self.peripheral_struct_name(), self.get_generics_string()));
+        for trait_member in self.get_trait_members_list() {
+            out.push_str(&format!("    {}: {},\n", trait_member.member_name(), trait_member.generic()));
+        }
         for proc in self.get_access_procs_map() {
             out.push_str(&format!("    {}: &'static {},\n", proc.member_name(), proc.struct_path()));
         }
         out.push_str(&format!("}}\n"));
-        out.push_str(&format!("impl<C: RegComms{}> {}<C> {{\n", self.regcomms_params(), self.peripheral_struct_name()));
-        out.push_str(&format!("    pub fn new(comms: C) -> Self {{\n"));
+        out.push_str(&format!("impl<{}> {}<{}> {{\n", self.get_generics_string(), self.peripheral_struct_name(), self.get_boundfree_generics()));
+        out.push_str(&format!("    pub fn new({}) -> Self {{\n", self.get_constructor_args_list()));
         out.push_str(&format!("        Self {{\n"));
-        out.push_str(&format!("            comms,\n"));
+        for trait_member in self.get_trait_members_list() {
+            out.push_str(&format!("             {},\n", trait_member.member_name()));
+        }
         for proc in self.get_access_procs_map() {
             out.push_str(&format!("            {}: {}.call_once(|| Default::default()),\n", proc.member_name(), proc.static_name()));
         }
         out.push_str(&format!("        }}\n"));
         out.push_str(&format!("    }}\n"));
         for reg in self.registers.iter() {
-            out.push_str(&format!("    pub fn {}<'a>(&'a mut self) -> {}::{}<'a, C> {{\n", reg.reg_method_name(), reg.reg_mod_name(), reg.reg_struct_name()));
+            out.push_str(&format!("    pub fn {}<'a>(&'a mut self) -> {}::{}<'a, {}> {{\n", reg.reg_method_name(), reg.reg_mod_name(), reg.reg_struct_name(), self.get_boundfree_generics()));
             out.push_str(&format!("        {}::{}(self)\n", reg.reg_mod_name(), reg.reg_struct_name()));
             out.push_str(&format!("    }}\n"));
         }

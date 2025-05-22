@@ -79,8 +79,8 @@ impl RegisterSpec {
         out.push_str(&format!("use core::result::Result;\n"));
         out.push_str(&format!("use regcomms::{{RegCommsError, RegComms, RegCommsAccessProc}};\n"));
         out.push_str(&format!("use crate::{};\n", pspec.peripheral_struct_name()));
-        out.push_str(&format!("pub struct {}<'a, C: RegComms{}>(pub &'a mut {}<C>);\n", self.reg_struct_name(), pspec.regcomms_params(), pspec.peripheral_struct_name()));
-        out.push_str(&format!("impl<'a, C: RegComms{}> {}<'a, C> {{\n", pspec.regcomms_params(), self.reg_struct_name()));
+        out.push_str(&format!("pub struct {}<'a, {}>(pub &'a mut {});\n", self.reg_struct_name(), pspec.get_generics_string(), pspec.get_parameterized_typename()));
+        out.push_str(&format!("impl<'a, {}> {}<'a, {}> {{\n", pspec.get_generics_string(), self.reg_struct_name(), pspec.get_boundfree_generics()));
         let endian = pspec.endian();
         if self.readable {
             out.push_str(&format!("    pub fn read(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));

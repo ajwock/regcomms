@@ -13,6 +13,7 @@ keywords = ["no_std", "embedded"]
 categories = ["embedded"]
 
 [dependencies]
+itertools = "0.14.0"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_yaml = "0.9.34"
 stringcase = "0.4.0"
