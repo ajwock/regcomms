@@ -12,6 +12,8 @@ pub struct PeripheralSpec {
     // Map from name for an enum variant for AccessProc to fully qualified function name taking
     // the named peripheral, reg address, and buffer
     pub non_standard_access_procs: Option<Vec<AccessProcSpec>>,
+    // Extra mods that may need to be included for non_standard_procs
+    pub extra_mods: Option<Vec<String>>,
 }
 
 impl PeripheralSpec {
@@ -88,6 +90,9 @@ impl PeripheralSpec {
         out.push_str(&format!("use core::default::Default;\n"));
         for register in self.registers.iter() {
             out.push_str(&format!("mod {};\n", register.reg_mod_name()));
+        }
+        for module in self.extra_mods.clone().unwrap_or(Vec::new()).iter() {
+            out.push_str(&format!("mod {};\n", module));
         }
         out.push_str(&format!("use regcomms::{{RegComms, RegCommsError, RegCommsAccessProc}};\n"));
         out.push_str(&format!("use spin::once::Once;\n"));

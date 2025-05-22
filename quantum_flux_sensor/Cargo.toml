@@ -9,5 +9,7 @@ build = "build.rs"
 regcommsgen = { path = "../regcommsgen" }
 
 [dependencies]
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
 regcomms = { path = "../regcomms" }
 spin = { version = "0.10.0", features = ["once"] }

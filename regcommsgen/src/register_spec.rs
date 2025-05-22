@@ -179,7 +179,7 @@ impl RegisterSpec {
                     if self.writable {
                         out.push_str(&format!("    pub fn assign(self, val: bool) -> &'a mut {} {{\n", self.regval_struct_name()));
                         out.push_str(&format!("        self.0.0 &= !(1 << {});\n", bit_pos));
-                        out.push_str(&format!("        self.0.0 |= !(!(val as {}) << {});\n", self.regval_word_name(), bit_pos));
+                        out.push_str(&format!("        self.0.0 |= (val as {}) << {};\n", self.regval_word_name(), bit_pos));
                         out.push_str(&format!("        self.0\n"));
                         out.push_str(&format!("    }}\n"));
                         out.push_str(&format!("    pub fn set_bit(self) -> &'a mut {} {{\n", self.regval_struct_name()));

@@ -1,19 +1,27 @@
 #![allow(dead_code)]
 use regcomms::{RegCommsAddress, RegComms, RegCommsError};
 
-pub struct MockedComms {
-    address_space: Vec<(u64, Vec<u8>)>,
+pub struct MockedQuantumFluxComms {
+    address_space: Vec<Vec<(u64, Vec<u8>)>>,
 }
 
-impl MockedComms {
-    fn new(v: Vec<(u64, Vec<u8>)>) -> Self {
+const BLK_SEL_W_ADDRESS: u64 = 0x100;
+const MADDR_W_ADDRESS: u64 = 0x101;
+const M_W_ADDRESS: u64 = 0x105;
+
+const BLK_SEL_R_ADDRESS: u64 = 0x110;
+const MADDR_R_ADDRESS: u64 = 0x111;
+const M_R_ADDRESS: u64 = 0x115;
+
+impl MockedQuantumFluxComms {
+    fn new(v: Vec<Vec<(u64, Vec<u8>)>>) -> Self {
         Self {
             address_space: v,
         }
     }
 
-    fn read_address(&self, address: u64, buf: &mut [u8]) -> Result<usize, RegCommsError> {
-        let Some((segaddr, seg)) = self.address_space.iter().find(|(segaddr, seg)| address >= *segaddr && address < (*segaddr + seg.len() as u64)) else {
+    fn read_address_in_block(&self, address: u64, buf: &mut [u8], block_sel: usize) -> Result<usize, RegCommsError> {
+        let Some((segaddr, seg)) = self.address_space[block_sel].iter().find(|(segaddr, seg)| address >= *segaddr && address < (*segaddr + seg.len() as u64)) else {
             return Err(RegCommsError::Other)
         };
         let seg_offset = (address - segaddr) as usize;
@@ -24,19 +32,75 @@ impl MockedComms {
         let out_src = &seg[seg_offset..read_end];
         out_dst.copy_from_slice(out_src);
         Ok(read_len)
+
+    }
+
+    fn read_address(&self, address: u64, buf: &mut [u8]) -> Result<usize, RegCommsError> {
+        if address == M_R_ADDRESS {
+            let mut blksel_buf = [0u8];
+            let mut maddr_r_buf = [0u8; 4];
+            self.read_address_in_block(BLK_SEL_R_ADDRESS, &mut blksel_buf, 0).unwrap();
+            self.read_address_in_block(MADDR_R_ADDRESS, &mut maddr_r_buf, 0).unwrap();
+            let maddress_r = u64_from_be_buf(&maddr_r_buf);
+            self.read_address_in_block(maddress_r, buf, blksel_buf[0] as usize)
+        } else {
+            self.read_address_in_block(address, buf, 0)
+        }
+    }
+
+    fn write_address_in_block(&mut self, address: u64, buf: &[u8], block_sel: usize) -> Result<usize, RegCommsError> {
+        let Some((segaddr, seg)) = self.address_space[block_sel].iter_mut().find(|(segaddr, seg)| address >= *segaddr && address < (*segaddr + seg.len() as u64)) else {
+            return Err(RegCommsError::Other)
+        };
+        let seg_offset = (address - *segaddr) as usize;
+        let seg_len = seg.len();
+        let bytes_available = seg_len - seg_offset as usize;
+        let write_len = std::cmp::min(buf.len(), bytes_available);
+        let write_end = seg_offset + write_len;
+        let w_src  = &buf[0..write_len];
+        let w_dst = &mut seg[seg_offset..write_end];
+        w_dst.copy_from_slice(w_src);
+        Ok(write_len)
+
+    }
+
+    fn write_address(&mut self, address: u64, buf: &[u8]) -> Result<usize, RegCommsError> {
+        if address == M_W_ADDRESS {
+            let mut blksel_buf = [0u8];
+            let mut maddr_w_buf = [0u8; 4];
+            self.read_address_in_block(BLK_SEL_W_ADDRESS, &mut blksel_buf, 0).unwrap();
+            self.read_address_in_block(MADDR_W_ADDRESS, &mut maddr_w_buf, 0).unwrap();
+            let maddress_w = u64_from_be_buf(&maddr_w_buf);
+            self.write_address_in_block(maddress_w, buf, blksel_buf[0] as usize)
+        } else {
+            self.write_address_in_block(address, buf, 0)
+        }
     }
 }
 
-impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedComms {
+fn u64_from_be_buf(buf: &[u8]) -> u64 {
+    u64_from_le_iter(buf.iter().rev())
+}
+
+fn u64_from_le_iter<'a, I: IntoIterator<Item = &'a u8>>(it: I) -> u64 {
+    it.into_iter().enumerate().fold(0, |acc, (index, &byte)| acc + byte as u64 * 256u64.pow(index as u32))
+}
+
+fn u64_from_regcommaddress<const N: usize, R: RegCommsAddress<N>>(num: R) -> u64 {
+    let reg_arr = num.to_little_endian();
+    let reg_addr_slc = reg_arr.as_slice();
+    u64_from_le_iter(reg_addr_slc)
+}
+
+impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedQuantumFluxComms {
     fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
-        let reg_arr = reg_address.to_little_endian();
-        let reg_addr_slc = reg_arr.as_slice();
-        let u64_address = reg_addr_slc.into_iter().enumerate().fold(0, |acc, (index, &byte)| acc + byte as u64 * 256u64.pow(index as u32));
+        let u64_address = u64_from_regcommaddress(reg_address);
         self.read_address(u64_address, buf).map(|_| ())
     }
 
-    fn comms_write(&mut self, _reg_address: R, _buf: &[u8]) -> Result<(), RegCommsError> {
-        todo!()
+    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
+        let u64_address = u64_from_regcommaddress(reg_address);
+        self.write_address(u64_address, buf).map(|_| ())
     }
 }
 
@@ -46,8 +110,27 @@ mod test {
     use quantum_flux_sensor::QuantumFluxSensor;
 
     #[test]
+    fn test_alternative_access_proc() {
+        let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3]), (0x100, vec![0x00; 6]), (0x110, vec![0x00; 6])], vec![(0x1, vec![0x55])]]);
+        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
+        let mut fifo_config5 = sensor.fifo_config5().read().unwrap();
+        assert_eq!(fifo_config5.get(), 0b01010101);
+        fifo_config5.fifo_20_bit_ext().set_bit();
+        assert_eq!(fifo_config5.get(), 0b11010101);
+        fifo_config5.fifo_excludes().set(0);
+        assert_eq!(fifo_config5.get(), 0b11000000);
+        sensor.fifo_config5().modify(|mut val| {
+            val.fifo_20_bit_ext().set_bit()
+                .fifo_excludes().set(0);
+            val
+        }).unwrap();
+        let fifo_config5 = sensor.fifo_config5().read().unwrap();
+        assert_eq!(fifo_config5.get(), 0b11000000);
+    }
+
+    #[test]
     fn test_quantum_flux_sensor() {
-        let comm_peripheral = MockedComms::new(vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]);
+        let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]]);
         let mut sensor = QuantumFluxSensor::new(comm_peripheral);
         let mut power_mode = sensor.power_mode().read().unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);
@@ -84,11 +167,17 @@ mod test {
         assert_eq!(fifo_config.get(), 0b11100010);
         fifo_config.set(0);
         assert_eq!(fifo_config.get(), 0);
+        sensor.fifo_config().write(fifo_config).unwrap();
+        let fifo_config = sensor.fifo_config().read().unwrap();
+        assert_eq!(fifo_config.get(), 0);
+        sensor.fifo_config().reset().unwrap();
+        let fifo_config = sensor.fifo_config().read().unwrap();
+        assert_eq!(fifo_config.get(), 0b11100011);
    }
 
 
     async fn embassy_test() {
-        let comm_peripheral = MockedComms::new(vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]);
+        let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]]);
         let mut sensor = QuantumFluxSensor::new(comm_peripheral);
         let mut power_mode = sensor.power_mode().read_async().await.unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);

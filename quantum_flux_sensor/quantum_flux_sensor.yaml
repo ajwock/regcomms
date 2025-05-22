@@ -1,6 +1,11 @@
 name: QuantumFluxSensor
 byte_order: Big
 address_len: 4
+non_standard_access_procs:
+  - proc_name: "mreg_1"
+    struct_path: "crate::handwritten::Mreg1"
+extra_mods:
+  - "handwritten"
 registers:
   - name: who_am_i
     address: 0xffffff08
@@ -99,3 +104,56 @@ registers:
         field_pos: '2'
       - name: fifo_decimation
         field_pos: '[4:3]'
+  - name: blk_sel_w
+    address: 0x100
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: maddr_w
+    address: 0x101
+    size: 4
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: m_w
+    address: 0x105
+    size: 1
+    readable: false
+    writable: true
+    fields:
+  - name: blk_sel_r
+    address: 0x110
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: maddr_r
+    address: 0x111
+    size: 4
+    readable: true
+    writable: true
+    reset_val: 0x00
+    fields:
+  - name: m_r
+    address: 0x115
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0x00
+    fields:
+  - name: fifo_config5
+    address: 0x1
+    size: 1
+    readable: true
+    writable: true
+    reset_val: 0x55
+    access_proc: "mreg_1"
+    fields:
+      - name: fifo_20_bit_ext
+        field_pos: '7'
+      - name: fifo_excludes
+        field_pos: '[4:0]'

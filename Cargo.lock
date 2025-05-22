@@ -387,6 +387,8 @@ dependencies = [
 name = "quantum_flux_sensor"
 version = "0.1.0"
 dependencies = [
+ "embedded-hal",
+ "embedded-hal-async",
  "regcomms",
  "regcommsgen",
  "spin",
