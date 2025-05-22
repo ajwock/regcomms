@@ -54,9 +54,8 @@ impl<C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<C>, 4, u32> for M
             val.set(reg_address);
             val
         })?;
-        let val_w = crate::m_w::MWVal(buf[0]);
         // delay 10us
-        peripheral.m_w().write(val_w)?;
+        peripheral.m_w().write_raw(buf[0])?;
         // delay 10us
         peripheral.blk_sel_w().modify(|mut val| {
             val.set(0);
@@ -73,9 +72,8 @@ impl<C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<C>, 4, u32> for M
             val.set(reg_address);
             val
         }).await?;
-        let val_w = crate::m_w::MWVal(buf[0]);
         // delay 10us
-        peripheral.m_w().write_async(val_w).await?;
+        peripheral.m_w().write_raw_async(buf[0]).await?;
         // delay 10us
         peripheral.blk_sel_w().modify_async(|mut val| {
             val.set(0);

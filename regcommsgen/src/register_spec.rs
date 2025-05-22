@@ -105,11 +105,17 @@ impl RegisterSpec {
             out.push_str(&format!("        proc.proc_write(&mut self.0, 0x{:x}, &buf{})?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        Ok(())\n"));
             out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub fn write_raw(&mut self, raw_val: {}) -> Result<(), RegCommsError> {{\n", self.regval_word_name()));
+            out.push_str(&format!("        self.write({}(raw_val))\n", self.regval_struct_name()));
+            out.push_str(&format!("    }}\n"));
             out.push_str(&format!("    pub async fn write_async(&mut self, val: {}) -> Result<(), RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let buf = val.0.to_be_bytes();\n"));
             out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
             out.push_str(&format!("        proc.proc_write_async(&mut self.0, 0x{:x}, &buf{}).await?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        Ok(())\n"));
+            out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn write_raw_async(&mut self, raw_val: {}) -> Result<(), RegCommsError> {{\n", self.regval_word_name()));
+            out.push_str(&format!("        self.write_async({}(raw_val)).await\n", self.regval_struct_name()));
             out.push_str(&format!("    }}\n"));
 
         }
