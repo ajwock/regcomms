@@ -13,7 +13,7 @@ impl TraitMember {
     }
 
     pub fn generic(&self) -> String {
-        stringcase::pascal_case(&self.name)
+        stringcase::pascal_case(&self.generic_type)
     }
 
     pub fn bound(&self) -> &str {

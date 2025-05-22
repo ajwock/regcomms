@@ -13,6 +13,7 @@ const BLK_SEL_R_ADDRESS: u64 = 0x110;
 const MADDR_R_ADDRESS: u64 = 0x111;
 const M_R_ADDRESS: u64 = 0x115;
 
+
 impl MockedQuantumFluxComms {
     fn new(v: Vec<Vec<(u64, Vec<u8>)>>) -> Self {
         Self {
@@ -108,11 +109,12 @@ impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedQuantumFlux
 mod test {
     use super::*;
     use quantum_flux_sensor::QuantumFluxSensor;
+    use embassy_time::Delay;
 
     #[test]
     fn test_alternative_access_proc() {
         let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3]), (0x100, vec![0x00; 6]), (0x110, vec![0x00; 6])], vec![(0x1, vec![0x55])]]);
-        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
+        let mut sensor = QuantumFluxSensor::new(Delay, comm_peripheral);
         let mut fifo_config5 = sensor.fifo_config5().read().unwrap();
         assert_eq!(fifo_config5.get(), 0b01010101);
         fifo_config5.fifo_20_bit_ext().set_bit();
@@ -131,7 +133,7 @@ mod test {
     #[test]
     fn test_quantum_flux_sensor() {
         let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]]);
-        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
+        let mut sensor = QuantumFluxSensor::new(Delay, comm_peripheral);
         let mut power_mode = sensor.power_mode().read().unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);
         assert_eq!(power_mode.poweron_mode().bits(), 0);
@@ -178,7 +180,7 @@ mod test {
 
     async fn embassy_test() {
         let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3])]]);
-        let mut sensor = QuantumFluxSensor::new(comm_peripheral);
+        let mut sensor = QuantumFluxSensor::new(Delay, comm_peripheral);
         let mut power_mode = sensor.power_mode().read_async().await.unwrap();
         assert_eq!(power_mode.pulsed().bit_is_set(), false);
         assert_eq!(power_mode.poweron_mode().bits(), 0);

@@ -111,21 +111,21 @@ impl PeripheralSpec {
         itertools::join(
             self.get_trait_members_list().iter()
                 .map(|t| format!("{}: {}", t.generic(), t.bound())),
-        ",")
+        ", ")
     }
 
     pub fn get_boundfree_generics(&self) -> String {
         itertools::join(
             self.get_trait_members_list().iter()
                 .map(|t| t.generic()),
-        ",")
+        ", ")
     }
 
     pub fn get_constructor_args_list(&self) -> String {
         itertools::join(
             self.get_trait_members_list().iter()
                 .map(|t| format!("{}: {}", t.member_name(), t.generic())),
-        ",")
+        ", ")
     }
     
     pub fn get_parameterized_typename(&self) -> String {
