@@ -13,6 +13,7 @@ use core::result::Result;
 #[derive(Copy, Clone, Debug)]
 pub enum RegCommsError {
     Other,
+    IncompleteTransfer,
 }
 
 pub trait RegCommsAddress<const N: usize>: Copy {
@@ -23,14 +24,14 @@ pub trait RegCommsAddress<const N: usize>: Copy {
 }
 
 pub trait RegComms<const N: usize, R: RegCommsAddress<N>> {
-    fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError>;
-    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError>;
+    fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError>;
+    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<usize, RegCommsError>;
 
     async fn comms_read_async<'a>(
         &'a mut self,
         reg_address: R,
         buf: &'a mut [u8],
-    ) -> Result<(), RegCommsError> {
+    ) -> Result<usize, RegCommsError> {
         self.comms_read(reg_address, buf)
     }
 
@@ -38,7 +39,7 @@ pub trait RegComms<const N: usize, R: RegCommsAddress<N>> {
         &'a mut self,
         reg_address: R,
         buf: &'a [u8],
-    ) -> Result<(), RegCommsError> {
+    ) -> Result<usize, RegCommsError> {
         self.comms_write(reg_address, buf)
     }
 }
@@ -104,12 +105,12 @@ impl RegCommsAddress<8> for u64 {
 }
 
 pub trait RegCommsAccessProc<Peripheral, const N: usize, R: RegCommsAddress<N>>: Default + Send + Sync {
-    fn proc_read(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError>;
-    async fn proc_read_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    fn proc_read(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError>;
+    async fn proc_read_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         self.proc_read(peripheral, reg_address, buf)
     }
-    fn proc_write(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError>;
-    async fn proc_write_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn proc_write(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<usize, RegCommsError>;
+    async fn proc_write_async(&self, peripheral: &mut Peripheral, reg_address: R, buf: &[u8]) -> Result<usize, RegCommsError> {
         self.proc_write(peripheral, reg_address, buf)
     }
 }

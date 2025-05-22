@@ -15,6 +15,7 @@ pub struct RegisterSpec {
     pub fields: Vec<FieldSpec>,
     pub access_proc: Option<String>,
     // aliasable
+    pub data_port: Option<bool>,
 }
 
 impl RegisterSpec {
@@ -33,6 +34,10 @@ impl RegisterSpec {
 
     pub fn regval_struct_name(&self) -> String {
         format!("{}Val", stringcase::pascal_case(&self.name))
+    }
+    
+    pub fn is_data_port(&self) -> bool {
+        self.data_port.unwrap_or(false)
     }
 
     pub fn regval_word_size(&self) -> u8 {
@@ -139,6 +144,32 @@ impl RegisterSpec {
                 out.push_str(&format!("        self.write_async({}(0x{:x})).await\n", self.regval_struct_name(), val));
                 out.push_str(&format!("    }}\n"));
             }
+        }
+        if self.is_data_port() && self.readable {
+            if self.size != 1 {
+                panic!("Data port only supported for size 1 registers now");
+            }
+            out.push_str(&format!("    pub fn data_port_read(&mut self, buf: &mut [u8]) -> Result<usize, RegCommsError> {{\n"));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc)));
+            out.push_str(&format!("        proc.proc_read(&mut self.0, 0x{:x}, buf)\n", self.address));
+            out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn data_port_read_async(&mut self, buf: &mut [u8]) -> Result<usize, RegCommsError> {{\n"));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc)));
+            out.push_str(&format!("        proc.proc_read_async(&mut self.0, 0x{:x}, buf).await\n", self.address));
+            out.push_str(&format!("    }}\n"));
+        }
+        if self.is_data_port() && self.writable {
+            if self.size != 1 {
+                panic!("Data port only supported for size 1 registers now");
+            }
+            out.push_str(&format!("    pub fn data_port_write(&mut self, buf: &[u8]) -> Result<usize, RegCommsError> {{\n"));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc)));
+            out.push_str(&format!("        proc.proc_write(&mut self.0, 0x{:x}, buf)\n", self.address));
+            out.push_str(&format!("    }}\n"));
+            out.push_str(&format!("    pub async fn data_port_write_async(&mut self, buf: &[u8]) -> Result<usize, RegCommsError> {{\n"));
+            out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc)));
+            out.push_str(&format!("        proc.proc_write_async(&mut self.0, 0x{:x}, buf).await\n", self.address));
+            out.push_str(&format!("    }}\n"));
         }
         out.push_str(&format!("}}\n"));
 

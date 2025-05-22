@@ -109,6 +109,21 @@ registers:
         field_pos: '2'
       - name: fifo_decimation
         field_pos: '[4:3]'
+  - name: fifo_data
+    address: 0x21
+    size: 1
+    readable: true
+    writable: false
+    reset_val: 0xff
+    data_port: true
+    fields:
+  - name: worker_periph_in
+    address: 0x50
+    size: 1
+    readable: false
+    writable: true
+    data_port: true
+    fields:
   - name: blk_sel_w
     address: 0x100
     size: 1

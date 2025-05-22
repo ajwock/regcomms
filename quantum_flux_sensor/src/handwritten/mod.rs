@@ -6,7 +6,7 @@ use embedded_hal_async::delay::DelayNs;
 pub struct Mreg1;
 
 impl<D: DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>, 4, u32> for Mreg1 {
-    fn proc_read(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    fn proc_read(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_r().modify(|mut val| {
             val.set(1);
@@ -23,9 +23,10 @@ impl<D: DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>
         peripheral.blk_sel_r().modify(|mut val| {
             val.set(0);
             val
-        })
+        })?;
+        Ok(1)
     }
-    async fn proc_read_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    async fn proc_read_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_r().modify_async(|mut val| {
             val.set(1);
@@ -42,10 +43,11 @@ impl<D: DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>
         peripheral.blk_sel_r().modify_async(|mut val| {
             val.set(0);
             val
-        }).await
+        }).await?;
+        Ok(1)
     }
 
-    fn proc_write(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn proc_write(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_w().modify(|mut val| {
             val.set(1);
@@ -59,9 +61,10 @@ impl<D: DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>
         peripheral.blk_sel_w().modify(|mut val| {
             val.set(0);
             val
-        })
+        })?;
+        Ok(1)
     }
-    async fn proc_write_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<(), RegCommsError> {
+    async fn proc_write_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<usize, RegCommsError> {
         assert!(buf.len() == 1);
         peripheral.blk_sel_w().modify_async(|mut val| {
             val.set(1);
@@ -77,6 +80,7 @@ impl<D: DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>
         peripheral.blk_sel_w().modify_async(|mut val| {
             val.set(0);
             val
-        }).await
+        }).await?;
+        Ok(1)
     }
 }

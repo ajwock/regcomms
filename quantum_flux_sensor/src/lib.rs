@@ -10,6 +10,8 @@ mod lepton_data;
 mod quark_data;
 mod boson_data;
 mod fifo_config;
+mod fifo_data;
+mod worker_periph_in;
 mod blk_sel_w;
 mod maddr_w;
 mod m_w;
@@ -23,16 +25,16 @@ use spin::once::Once;
 #[derive(Default)]
 pub struct StandardAccessProc;
 impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<4, u32>> RegCommsAccessProc<QuantumFluxSensor<D, C>, 4, u32> for StandardAccessProc {
-    fn proc_read(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    fn proc_read(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         peripheral.comms.comms_read(reg_address, buf)
     }
-    async fn proc_read_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    async fn proc_read_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         peripheral.comms.comms_read_async(reg_address, buf).await
     }
-    fn proc_write(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn proc_write(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<usize, RegCommsError> {
         peripheral.comms.comms_write(reg_address, buf)
     }
-    async fn proc_write_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<(), RegCommsError> {
+    async fn proc_write_async(&self, peripheral: &mut QuantumFluxSensor<D, C>, reg_address: u32, buf: &[u8]) -> Result<usize, RegCommsError> {
         peripheral.comms.comms_write_async(reg_address, buf).await
     }
 }
@@ -79,6 +81,12 @@ impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<4, u32>> QuantumFluxSens
     }
     pub fn fifo_config<'a>(&'a mut self) -> fifo_config::FifoConfig<'a, D, C> {
         fifo_config::FifoConfig(self)
+    }
+    pub fn fifo_data<'a>(&'a mut self) -> fifo_data::FifoData<'a, D, C> {
+        fifo_data::FifoData(self)
+    }
+    pub fn worker_periph_in<'a>(&'a mut self) -> worker_periph_in::WorkerPeriphIn<'a, D, C> {
+        worker_periph_in::WorkerPeriphIn(self)
     }
     pub fn blk_sel_w<'a>(&'a mut self) -> blk_sel_w::BlkSelW<'a, D, C> {
         blk_sel_w::BlkSelW(self)

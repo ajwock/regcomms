@@ -94,14 +94,14 @@ fn u64_from_regcommaddress<const N: usize, R: RegCommsAddress<N>>(num: R) -> u64
 }
 
 impl<const N: usize, R: RegCommsAddress<N>> RegComms<N, R> for MockedQuantumFluxComms {
-    fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<(), RegCommsError> {
+    fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         let u64_address = u64_from_regcommaddress(reg_address);
-        self.read_address(u64_address, buf).map(|_| ())
+        self.read_address(u64_address, buf)
     }
 
-    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<(), RegCommsError> {
+    fn comms_write(&mut self, reg_address: R, buf: &[u8]) -> Result<usize, RegCommsError> {
         let u64_address = u64_from_regcommaddress(reg_address);
-        self.write_address(u64_address, buf).map(|_| ())
+        self.write_address(u64_address, buf)
     }
 }
 
@@ -110,6 +110,16 @@ mod test {
     use super::*;
     use quantum_flux_sensor::QuantumFluxSensor;
     use embassy_time::Delay;
+
+    #[test]
+    fn test_data_port() {
+
+        let comm_peripheral = MockedQuantumFluxComms::new(vec![vec![(0x1, vec![0x0]), (0x16, vec![0xe0, 0xe0, 0xe0]), (0x20, vec![0xe3]), (0x21, vec![0x55; 16]), (0x100, vec![0x00; 6]), (0x110, vec![0x00; 6])], vec![(0x1, vec![0x55])]]);
+        let mut sensor = QuantumFluxSensor::new(Delay, comm_peripheral);
+        let mut buf = [0u8; 16];
+        sensor.fifo_data().data_port_read(&mut buf).unwrap();
+        assert_eq!(buf, [0x55; 16]);
+    }
 
     #[test]
     fn test_alternative_access_proc() {
