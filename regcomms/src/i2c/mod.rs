@@ -38,7 +38,7 @@ impl<A: Copy + Default + embedded_hal::i2c::AddressMode, I: embedded_hal::i2c::I
     fn comms_read(&mut self, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         let reg_address_bytes = reg_address.to_big_endian();
         match self.comms.write_read(self.i2c_address, &reg_address_bytes, buf) {
-            Ok(len) => Ok(len),
+            Ok(_) => Ok(buf.len()),
             Err(_) => Err(RegCommsError::Other),
         }
     }
@@ -47,7 +47,7 @@ impl<A: Copy + Default + embedded_hal::i2c::AddressMode, I: embedded_hal::i2c::I
         let reg_address_bytes = reg_address.to_big_endian();
         let mut ops = [embedded_hal::i2c::Operation::Write(&reg_address_bytes), embedded_hal::i2c::Operation::Write(buf)];
         match self.comms.transaction(self.i2c_address, &mut ops) {
-            Ok(len) => Ok(len),
+            Ok(_) => Ok(buf.len()),
             Err(_) => Err(RegCommsError::Other),
         }
     }
@@ -97,7 +97,7 @@ impl<A: Copy + Default + embedded_hal_async::i2c::AddressMode, I: embedded_hal_a
     async fn comms_read_async(&mut self, reg_address: R, buf: &mut [u8]) -> Result<usize, RegCommsError> {
         let reg_address_bytes = reg_address.to_big_endian();
         match self.comms.write_read(self.i2c_address, &reg_address_bytes, buf).await {
-            Ok(len) => Ok(len),
+            Ok(_) => Ok(buf.len()),
             Err(_) => Err(RegCommsError::Other),
         }
     }
@@ -106,7 +106,7 @@ impl<A: Copy + Default + embedded_hal_async::i2c::AddressMode, I: embedded_hal_a
         let reg_address_bytes = reg_address.to_big_endian();
         let mut ops = [embedded_hal_async::i2c::Operation::Write(&reg_address_bytes), embedded_hal_async::i2c::Operation::Write(buf)];
         match self.comms.transaction(self.i2c_address, &mut ops).await {
-            Ok(len) => Ok(len),
+            Ok(_) => Ok(buf.len()),
             Err(_) => Err(RegCommsError::Other),
         }
     }
