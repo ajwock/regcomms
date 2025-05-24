@@ -2,6 +2,13 @@ use serde::{Serialize, Deserialize};
 use crate::field_spec::{FieldSpec, FieldPos};
 use crate::peripheral_spec::PeripheralSpec;
 use crate::endian::Endian;
+use crate::struct_spec::StructSpec;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum SpecialRegType {
+    DataPort,
+    Struct(StructSpec),
+}
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RegisterSpec {
@@ -12,10 +19,10 @@ pub struct RegisterSpec {
     pub readable: bool,
     pub writable: bool,
     pub reset_val: Option<u64>,
-    pub fields: Vec<FieldSpec>,
+    pub fields: Option<Vec<FieldSpec>>,
     pub access_proc: Option<String>,
     // aliasable
-    pub data_port: Option<bool>,
+    pub special_type: Option<SpecialRegType>,
 }
 
 impl RegisterSpec {
@@ -37,9 +44,13 @@ impl RegisterSpec {
     }
     
     pub fn is_data_port(&self) -> bool {
-        self.data_port.unwrap_or(false)
+        match self.special_type {
+            Some(SpecialRegType::DataPort) => true,
+            _ => false,
+        }
     }
 
+    // Note:  This may not be used in struct special reg type
     pub fn regval_word_size(&self) -> u8 {
         let len = self.size;
         if len <= 2 {
@@ -53,6 +64,7 @@ impl RegisterSpec {
         }
     }
 
+    // Note:  This may not be used in struct special reg type
     pub fn regval_word_name(&self) -> &'static str {
         match self.regval_word_size() {
             1 => "u8",
@@ -94,7 +106,7 @@ impl RegisterSpec {
             out.push_str(&format!("        proc.proc_read(&mut self.0, 0x{:x}, &mut buf{})?;\n", self.address, self.commsbuf_subscript(endian)));
             out.push_str(&format!("        let val = {}::from_{}_bytes(buf);\n", self.regval_word_name(), endian.abbrev()));
             out.push_str(&format!("        Ok({}(val))\n", self.regval_struct_name()));
-            out.push_str(&format!("    }}\n"));
+           out.push_str(&format!("    }}\n"));
             out.push_str(&format!("    pub async fn read_async(&mut self) -> Result<{}, RegCommsError> {{\n", self.regval_struct_name()));
             out.push_str(&format!("        let mut buf = [0u8; {}];\n", self.regval_word_size()));
             out.push_str(&format!("        let proc = self.0.{};\n", pspec.get_access_proc_member_name(&self.access_proc))); 
@@ -197,7 +209,7 @@ impl RegisterSpec {
             out.push_str(&format!("        Self(0x{:x})\n", val));
             out.push_str(&format!("    }}\n"));
         }
-        for field in self.fields.iter() {
+        for field in self.fields.as_ref().into_iter().flatten() {
             out.push_str(&format!("    pub fn {}<'a>(&'a mut self) -> {}<'a> {{\n", field.method_name(), field.struct_name()));
             out.push_str(&format!("        {}(self)\n", field.struct_name()));
             out.push_str(&format!("    }}\n"));
@@ -205,7 +217,7 @@ impl RegisterSpec {
         out.push_str(&format!("}}\n"));
 
         // Field struct generation
-        for field in self.fields.iter() {
+        for field in self.fields.as_ref().into_iter().flatten() {
             out.push_str(&format!("pub struct {}<'a>(pub &'a mut {});\n", field.struct_name(), self.regval_struct_name()));
             out.push_str(&format!("impl<'a> {}<'a> {{\n", field.struct_name()));
             match field.field_pos {
@@ -279,4 +291,5 @@ impl RegisterSpec {
         }
         out
     }
+
 }
