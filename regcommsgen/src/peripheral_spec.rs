@@ -3,6 +3,7 @@ use crate::register_spec::RegisterSpec;
 use crate::endian::Endian;
 use crate::access_proc::AccessProcSpec;
 use crate::trait_member::TraitMember;
+use crate::struct_spec::StructSpec;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct PeripheralSpec {
@@ -20,6 +21,7 @@ pub struct PeripheralSpec {
     // Useful for access procs
     // e.g. embedded_hal_async::delay::DelayNs
     pub trait_members: Option<Vec<TraitMember>>,
+    pub struct_defns: Option<Vec<StructSpec>>,
 }
 
 impl PeripheralSpec {

@@ -3,6 +3,7 @@ mod field_spec;
 mod peripheral_spec;
 mod access_proc;
 mod trait_member;
+mod struct_spec;
 mod endian;
 
 use std::fs::File;

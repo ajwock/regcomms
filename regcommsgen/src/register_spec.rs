@@ -172,7 +172,12 @@ impl RegisterSpec {
             out.push_str(&format!("    }}\n"));
         }
         out.push_str(&format!("}}\n"));
+        out.push_str(&self.generate_regval_struct());
+        out
+    }
 
+    pub fn generate_regval_struct(&self) -> String {
+        let mut out = String::new();
         // Regval struct generation
         out.push_str(&format!("pub struct {}(pub {});\n", self.regval_struct_name(), self.regval_word_name()));
         out.push_str(&format!("impl {} {{\n", self.regval_struct_name()));
