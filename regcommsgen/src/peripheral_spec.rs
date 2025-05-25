@@ -169,10 +169,10 @@ impl PeripheralSpec {
         }
         out.push_str(&format!("pub struct {}<{}> {{\n", self.peripheral_struct_name(), self.get_generics_string()));
         for trait_member in self.get_trait_members_list() {
-            out.push_str(&format!("    {}: {},\n", trait_member.member_name(), trait_member.generic()));
+            out.push_str(&format!("    pub {}: {},\n", trait_member.member_name(), trait_member.generic()));
         }
         for proc in self.get_access_procs_map() {
-            out.push_str(&format!("    {}: &'static {},\n", proc.member_name(), proc.struct_path()));
+            out.push_str(&format!("    pub {}: &'static {},\n", proc.member_name(), proc.struct_path()));
         }
         out.push_str(&format!("}}\n"));
         out.push_str(&format!("impl<{}> {}<{}> {{\n", self.get_generics_string(), self.peripheral_struct_name(), self.get_boundfree_generics()));
