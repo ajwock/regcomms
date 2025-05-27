@@ -41,10 +41,10 @@ impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<4, u32>> RegCommsAccessP
 static MREG_1: Once<crate::handwritten::Mreg1> = Once::new();
 static STANDARD: Once<StandardAccessProc> = Once::new();
 pub struct QuantumFluxSensor<D: embedded_hal_async::delay::DelayNs, C: RegComms<4, u32>> {
-    delay: D,
-    comms: C,
-    mreg_1: &'static crate::handwritten::Mreg1,
-    standard: &'static StandardAccessProc,
+    pub delay: D,
+    pub comms: C,
+    pub mreg_1: &'static crate::handwritten::Mreg1,
+    pub standard: &'static StandardAccessProc,
 }
 impl<D: embedded_hal_async::delay::DelayNs, C: RegComms<4, u32>> QuantumFluxSensor<D, C> {
     pub fn new(delay: D, comms: C) -> Self {
